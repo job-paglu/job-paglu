@@ -1,0 +1,16 @@
+{
+  "name": "linktree-clone",
+  "version": "1.0.0",
+  "description": "Static, self-updating clone of a public Linktree page, deployed on GitHub Pages via GitHub Actions.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "scrape": "node scripts/scrape.js",
+    "start": "npx --yes http-server -p 8080 -c-1 ."
+  },
+  "dependencies": {},
+  "license": "MIT"
+}

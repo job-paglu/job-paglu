@@ -1,0 +1,320 @@
+/* -------------------------------------------------------------------- */
+/* Design tokens                                                         */
+/* -------------------------------------------------------------------- */
+:root {
+  color-scheme: light dark;
+
+  --bg-start: #0e0e10;
+  --bg-end: #1c1c22;
+  --surface: rgba(255, 255, 255, 0.06);
+  --surface-hover: rgba(255, 255, 255, 0.12);
+  --text: #f5f5f7;
+  --text-muted: #b9b9c2;
+  --border: rgba(255, 255, 255, 0.14);
+  --accent: #22d1ee;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --radius-lg: 20px;
+  --radius-full: 999px;
+  --max-width: 640px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg-start: #f7f7fb;
+    --bg-end: #e9e9f2;
+    --surface: rgba(0, 0, 0, 0.035);
+    --surface-hover: rgba(0, 0, 0, 0.07);
+    --text: #16161a;
+    --text-muted: #55555f;
+    --border: rgba(0, 0, 0, 0.08);
+    --accent: #0e7c93;
+    --shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  }
+}
+
+/* -------------------------------------------------------------------- */
+/* Reset                                                                  */
+/* -------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  color: var(--text);
+  background: radial-gradient(circle at top, var(--bg-end), var(--bg-start) 70%);
+  background-attachment: fixed;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* -------------------------------------------------------------------- */
+/* Accessibility helpers                                                  */
+/* -------------------------------------------------------------------- */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: var(--accent);
+  color: #04222a;
+  padding: 0.75rem 1rem;
+  border-radius: 0 0 8px 0;
+  z-index: 100;
+  font-weight: 600;
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+/* -------------------------------------------------------------------- */
+/* Layout                                                                 */
+/* -------------------------------------------------------------------- */
+.page {
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: clamp(1.5rem, 6vw, 3rem) 1.25rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100dvh;
+}
+
+/* -------------------------------------------------------------------- */
+/* Profile header                                                        */
+/* -------------------------------------------------------------------- */
+.profile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  animation: fade-in-up 0.5s ease both;
+}
+
+.avatar-wrap {
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  padding: 3px;
+  background: linear-gradient(135deg, var(--accent), transparent 70%);
+  margin-bottom: 1rem;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--bg-start);
+  background: var(--surface);
+}
+
+.name {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0.25rem 0 0.35rem;
+  word-break: break-word;
+}
+
+.bio {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  max-width: 46ch;
+  margin: 0 0 1rem;
+  white-space: pre-line;
+}
+
+/* -------------------------------------------------------------------- */
+/* Socials                                                                */
+/* -------------------------------------------------------------------- */
+.socials {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+}
+
+.socials li {
+  display: flex;
+}
+
+.social-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 1.05rem;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.social-link:hover,
+.social-link:focus-visible {
+  background: var(--surface-hover);
+  transform: translateY(-2px) scale(1.05);
+}
+
+/* -------------------------------------------------------------------- */
+/* Links                                                                  */
+/* -------------------------------------------------------------------- */
+.links {
+  width: 100%;
+}
+
+.links-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.link-item {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: fade-in-up 0.45s ease forwards;
+}
+
+.link-button {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  font-size: 1rem;
+  text-align: center;
+  justify-content: center;
+  box-shadow: var(--shadow);
+  transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  cursor: pointer;
+}
+
+.link-button:hover,
+.link-button:focus-visible {
+  background: var(--surface-hover);
+  transform: translateY(-3px) scale(1.015);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+}
+
+.link-button:active {
+  transform: translateY(-1px) scale(0.995);
+}
+
+.link-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  object-fit: cover;
+}
+
+.link-title {
+  overflow-wrap: anywhere;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 2rem 1rem;
+}
+
+/* -------------------------------------------------------------------- */
+/* Footer                                                                 */
+/* -------------------------------------------------------------------- */
+.footer {
+  margin-top: auto;
+  padding-top: 2.5rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.footer a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.footer a:hover,
+.footer a:focus-visible {
+  color: var(--accent);
+}
+
+.footer-updated {
+  margin-top: 0.25rem;
+  opacity: 0.7;
+}
+
+/* -------------------------------------------------------------------- */
+/* Animations                                                             */
+/* -------------------------------------------------------------------- */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* -------------------------------------------------------------------- */
+/* Responsive tweaks                                                     */
+/* -------------------------------------------------------------------- */
+@media (min-width: 480px) {
+  .avatar-wrap {
+    width: 128px;
+    height: 128px;
+  }
+
+  .name {
+    font-size: 1.5rem;
+  }
+}
