@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://job-pglu.github.io/job-paglu/sitemap.xml
+Sitemap: https://job-paglu.github.io/job-paglu/sitemap.xml
