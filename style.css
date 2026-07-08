@@ -149,6 +149,23 @@ ul {
   word-break: break-word;
 }
 
+.handle {
+  display: inline-block;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.6rem;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+.handle:hover,
+.handle:focus-visible {
+  opacity: 0.8;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .bio {
   color: var(--text-muted);
   font-size: 0.95rem;
