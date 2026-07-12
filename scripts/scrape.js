@@ -516,9 +516,18 @@ async function main() {
 
   const githubProfile = await fetchGithubProfile(owner);
   const pagesUrl = buildPagesUrl(owner, repo);
+  const previous = await readExistingProfile();
 
-  const displayName = githubProfile?.name || linktreeProfile.name;
-  const bio = githubProfile?.bio || linktreeProfile.bio;
+  // Only the job links themselves should refresh on every run. The
+  // display name/title/bio are set once (preferring the GitHub profile,
+  // then whatever Linktree shows on the very first run) and then kept
+  // frozen — Linktree's own title/description text on this page changes
+  // frequently (it's rotated to whatever job posting is currently
+  // featured), and re-deriving it every 3 hours made the site's name and
+  // SEO title flip-flop. Hand-edit data/profile.json's `profile.name` /
+  // `profile.bio` directly if you ever want to change them.
+  const displayName = previous?.profile?.name || githubProfile?.name || linktreeProfile.name;
+  const bio = previous?.profile?.bio ?? (githubProfile?.bio || linktreeProfile.bio);
   const avatar = githubProfile?.avatarUrl || linktreeProfile.avatar;
 
   const profileData = {
@@ -536,14 +545,11 @@ async function main() {
     socials: linktreeProfile.socials,
   };
 
-  if (profileData.links.length === 0) {
-    const previous = await readExistingProfile();
-    if (previous && previous.links?.length > 0) {
-      throw new Error(
-        'Scrape produced zero links (likely a markup/schema change or a blocked request). ' +
-          'Keeping previous data/profile.json untouched.'
-      );
-    }
+  if (profileData.links.length === 0 && previous?.links?.length > 0) {
+    throw new Error(
+      'Scrape produced zero links (likely a markup/schema change or a blocked request). ' +
+        'Keeping previous data/profile.json untouched.'
+    );
   }
 
   // Minified JSON output (no pretty-printing) to keep the payload small.
