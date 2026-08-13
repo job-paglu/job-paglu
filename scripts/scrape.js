@@ -35,6 +35,11 @@ const SITEMAP_PATH = path.join(ROOT, 'sitemap.xml');
 const LINKTREE_URL =
   process.env.LINKTREE_URL || 'https://linktr.ee/karrarhussainjobs';
 
+// Custom domain configured for GitHub Pages (see /CNAME). Canonical URLs,
+// robots.txt and sitemap.xml all point here rather than at *.github.io so
+// search engines and AdSense see a single origin for the site.
+const SITE_URL = process.env.SITE_URL || 'https://jobpaglu.eu.cc/';
+
 const FETCH_TIMEOUT_MS = 15_000;
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
@@ -390,6 +395,7 @@ async function fetchGithubProfile(owner) {
 /* --------------------------------------------------------------------- */
 
 function buildPagesUrl(owner, repo) {
+  if (SITE_URL) return SITE_URL.endsWith('/') ? SITE_URL : `${SITE_URL}/`;
   if (!owner) return null;
   if (repo && repo.toLowerCase() === `${owner.toLowerCase()}.github.io`) {
     return `https://${owner.toLowerCase()}.github.io/`;
