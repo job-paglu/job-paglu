@@ -1,15 +1,14 @@
 // script.js — Job Paglu
 // Vanilla-JS renderer with:
 //  - Clean main page: no ads on page open, just links
-//  - Premium search bar at top (UI/UX priority)
-//  - Search → shortlink interstitial ad → bypass → results page with ads
+//  - Premium search bar at top (HERO — UI/UX priority)
+//  - Search → sets #search=BASE64 hash → shortlink service shows ad → redirects back → auto-execute
 //  - Sidebar + inline ad banners appear only on search results page
 //  - Clean, professional UI — no placeholder/junk text
 
 const DATA_URL = 'data/profile.json';
 const ADSENSE_CLIENT = 'ca-pub-3043505043619574';
 const LINKS_PER_AD = 3;
-const INTERSTITIAL_COUNTDOWN_SECONDS = 5;
 
 // ─── Globals ──────────────────────────────────────────────────────
 let allLinks = [];
@@ -211,55 +210,41 @@ function renderSearchResults(query, results) {
   pushSidebarAds();
 }
 
-// ─── Interstitial ad overlay ──────────────────────────────────────
-function showInterstitial(query, onBypassed) {
-  const overlay = document.getElementById('interstitial-overlay');
-  const shortlinkEl = document.getElementById('interstitial-shortlink');
-  const countdownEl = document.getElementById('interstitial-countdown');
-  const timerEl = document.getElementById('interstitial-timer');
-  const skipBtn = document.getElementById('interstitial-skip-btn');
-
-  const shortlink = generateShortlink(query);
-  shortlinkEl.textContent = `Shortlink: ${shortlink}`;
-
-  let remaining = INTERSTITIAL_COUNTDOWN_SECONDS;
-  countdownEl.textContent = remaining;
-  skipBtn.disabled = true;
-  timerEl.style.display = '';
-  overlay.hidden = false;
-
-  pushAd(); // push interstitial ad
-
-  const timer = setInterval(() => {
-    remaining--;
-    countdownEl.textContent = remaining;
-    if (remaining <= 0) {
-      clearInterval(timer);
-      skipBtn.disabled = false;
-      timerEl.style.display = 'none';
-    }
-  }, 1000);
-
-  const handleSkip = () => {
-    clearInterval(timer);
-    overlay.hidden = true;
-    skipBtn.removeEventListener('click', handleSkip);
-    if (onBypassed) onBypassed();
-  };
-  skipBtn.addEventListener('click', handleSkip);
-}
-
-// ─── Search: execute ──────────────────────────────────────────────
+// ─── Search: execute (no interstitial — direct hash-based) ────────
 function executeSearch(query) {
   if (!query.trim()) return;
   currentQuery = query.trim();
 
-  const results = filterLinks(currentQuery, allLinks);
+  // Set the hash so the URL becomes #search=BASE64ENCODEDQUERY
+  // This is the URL the user will feed to their shortlink service
+  const encoded = btoa(unescape(encodeURIComponent(currentQuery)));
+  const targetHash = `#search=${encoded}`;
 
-  showInterstitial(currentQuery, () => {
+  // Only update hash if it's different (avoid redundant hashchange)
+  if (window.location.hash !== targetHash) {
+    window.location.hash = targetHash;
+    // hashchange event will trigger executeSearchFromHash
+    return;
+  }
+
+  // If hash is already set (e.g. from hashchange or page load), render directly
+  const results = filterLinks(currentQuery, allLinks);
+  hideEl('links');
+  renderSearchResults(currentQuery, results);
+}
+
+// ─── Search: execute from hash (called by hashchange & checkHashShortlink) ──
+function executeSearchFromHash() {
+  const query = decodeShortlink(window.location.hash);
+  if (query) {
+    currentQuery = query;
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) searchInput.value = query;
+
+    const results = filterLinks(query, allLinks);
     hideEl('links');
-    renderSearchResults(currentQuery, results);
-  });
+    renderSearchResults(query, results);
+  }
 }
 
 // ─── Search: clear (back to clean main page) ──────────────────────
@@ -310,13 +295,17 @@ function renderLastUpdated(generatedAt) {
   setText('last-updated', `Last updated ${date.toLocaleString()}`);
 }
 
-// ─── Hash shortlink check ─────────────────────────────────────────
+// ─── Hash shortlink check (on page load) ─────────────────────────
 function checkHashShortlink() {
   const query = decodeShortlink(window.location.hash);
   if (query) {
     const searchInput = document.getElementById('search-input');
     if (searchInput) searchInput.value = query;
-    setTimeout(() => executeSearch(query), 300);
+    // Auto-execute search directly (no interstitial)
+    currentQuery = query;
+    const results = filterLinks(query, allLinks);
+    hideEl('links');
+    renderSearchResults(query, results);
     return true;
   }
   return false;
@@ -341,12 +330,11 @@ async function init() {
     initSearch();
     checkHashShortlink();
 
+    // Listen for hash changes (e.g. shortlink redirect back)
     window.addEventListener('hashchange', () => {
       const query = decodeShortlink(window.location.hash);
       if (query) {
-        const searchInput = document.getElementById('search-input');
-        if (searchInput) searchInput.value = query;
-        executeSearch(query);
+        executeSearchFromHash();
       } else {
         clearSearch();
       }

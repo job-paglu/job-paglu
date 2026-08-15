@@ -174,12 +174,12 @@ ul { list-style: none; margin: 0; padding: 0; }
 }
 
 /* ==================================================================== */
-/* Premium Search Section (top UI/UX priority)                          */
+/* Premium Search Section — HERO of the page                             */
 /* ==================================================================== */
 .search-section {
   width: 100%;
-  max-width: var(--content-width);
-  margin: 1.25rem 0 1.5rem;
+  max-width: 620px;
+  margin: 1.5rem 0 2rem;
   animation: fade-in-up 0.55s ease both;
 }
 
@@ -187,44 +187,75 @@ ul { list-style: none; margin: 0; padding: 0; }
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  margin-bottom: 0.6rem;
+  gap: 0.55rem;
+  margin-bottom: 0.85rem;
 }
 
 .search-section-icon {
   color: var(--accent);
+  filter: drop-shadow(0 0 6px var(--accent-dim));
 }
 
 .search-section-text {
-  font-size: 0.95rem;
-  font-weight: 700;
+  font-size: 1.1rem;
+  font-weight: 800;
   color: var(--accent);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
+  text-shadow: 0 0 20px var(--accent-dim);
 }
 
+/* Outer wrap — provides the glow halo behind the bar */
+.search-bar-wrap {
+  position: relative;
+  padding: 3px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--accent-glow), transparent 60%);
+}
+
+/* The actual search bar row */
 .search-bar-inner {
   display: flex;
   align-items: center;
   gap: 0;
-  background: var(--surface);
-  border: 2px solid var(--accent-dim);
-  border-radius: var(--radius-lg);
+  background: var(--bg-start);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-full);
   padding: 0;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
   overflow: hidden;
-  box-shadow: 0 4px 24px var(--accent-dim), var(--shadow);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.15),
+              0 4px 24px var(--accent-dim),
+              var(--shadow);
 }
 
 .search-bar-inner:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-dim), 0 8px 32px var(--accent-glow), var(--shadow-lg);
-  background: var(--surface-hover);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.15),
+              0 0 0 4px var(--accent-dim),
+              0 8px 32px var(--accent-glow),
+              var(--shadow-lg);
+}
+
+/* Light mode inner shadow fix */
+@media (prefers-color-scheme: light) {
+  .search-bar-inner {
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.04),
+                0 4px 24px var(--accent-dim),
+                var(--shadow);
+    background: #fff;
+  }
+  .search-bar-inner:focus-within {
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.04),
+                0 0 0 4px var(--accent-dim),
+                0 8px 32px var(--accent-glow),
+                var(--shadow-lg);
+  }
 }
 
 .search-icon {
   flex-shrink: 0;
   color: var(--text-muted);
-  margin-left: 1rem;
+  margin-left: 1.25rem;
   pointer-events: none;
   transition: color 0.25s ease;
 }
@@ -235,8 +266,8 @@ ul { list-style: none; margin: 0; padding: 0; }
 
 .search-input {
   flex: 1;
-  padding: 1rem 0.75rem;
-  font-size: 1rem;
+  padding: 1.05rem 0.75rem;
+  font-size: 1.05rem;
   font-family: inherit;
   color: var(--text);
   background: transparent;
@@ -247,47 +278,90 @@ ul { list-style: none; margin: 0; padding: 0; }
 
 .search-input::placeholder {
   color: var(--text-muted);
+  opacity: 0.7;
 }
 
+/* ── Search Button — premium accent gradient pill ── */
 .search-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
-  padding: 0.75rem 1.4rem;
-  margin: 0.35rem;
+  gap: 0.45rem;
+  padding: 0.8rem 1.6rem;
+  margin: 0.4rem;
   font-size: 0.95rem;
   font-weight: 700;
   font-family: inherit;
   color: #04222a;
-  background: linear-gradient(135deg, var(--accent), #1ab8d4);
+  background: linear-gradient(135deg, var(--accent), #1ab8d4, #18c9e0);
   border: none;
-  border-radius: calc(var(--radius-lg) - 6px);
+  border-radius: var(--radius-full);
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
   box-shadow: 0 2px 12px var(--accent-dim);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.2s ease,
+              filter 0.2s ease;
 }
 
-.search-btn:hover, .search-btn:focus-visible {
-  transform: scale(1.04);
-  box-shadow: 0 6px 20px var(--accent-glow);
+/* Shimmer overlay */
+.search-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.25) 45%,
+    rgba(255, 255, 255, 0.25) 55%,
+    transparent 60%
+  );
+  transform: translateX(-150%);
+  transition: transform 0.5s ease;
+  pointer-events: none;
+}
+
+.search-btn:hover::before,
+.search-btn:focus-visible::before {
+  transform: translateX(150%);
+}
+
+.search-btn:hover,
+.search-btn:focus-visible {
+  transform: scale(1.06);
+  box-shadow: 0 6px 24px var(--accent-glow), 0 0 40px var(--accent-dim);
+  filter: brightness(1.08);
 }
 
 .search-btn:active {
   transform: scale(0.97);
+  box-shadow: 0 2px 8px var(--accent-dim);
+  filter: brightness(0.95);
 }
 
 .search-btn-text {
   display: inline;
+  line-height: 1;
+}
+
+.search-btn-arrow {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.search-btn:hover .search-btn-arrow {
+  transform: translateX(2px);
 }
 
 .search-hint {
   text-align: center;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--text-muted);
-  margin-top: 0.5rem;
-  opacity: 0.7;
+  margin-top: 0.65rem;
+  opacity: 0.6;
+  letter-spacing: 0.02em;
 }
 
 /* ==================================================================== */
@@ -514,129 +588,6 @@ ul { list-style: none; margin: 0; padding: 0; }
 }
 
 /* ==================================================================== */
-/* Interstitial Overlay (Shortlink Bypass Ad)                             */
-/* ==================================================================== */
-.interstitial-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.88);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  animation: fade-in 0.3s ease;
-  padding: 1rem;
-}
-
-.interstitial-card {
-  width: 100%;
-  max-width: 440px;
-  background: var(--bg-start);
-  border: 1.5px solid var(--accent-dim);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 40px var(--accent-dim);
-}
-
-.interstitial-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border);
-  color: var(--accent);
-}
-
-.interstitial-brand {
-  font-weight: 700;
-  font-size: 0.9rem;
-  letter-spacing: -0.01em;
-}
-
-.interstitial-ad-slot {
-  position: relative;
-  width: 100%;
-  min-height: 220px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-}
-
-.interstitial-ad-content {
-  width: 100%;
-  min-height: 220px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-}
-
-.interstitial-info {
-  padding: 1.25rem 1.5rem;
-  text-align: center;
-}
-
-.interstitial-shortlink {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  margin: 0 0 0.75rem;
-  word-break: break-all;
-  opacity: 0.7;
-}
-
-.interstitial-timer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
-
-.timer-spinner {
-  animation: spin 1.2s linear infinite;
-  color: var(--accent);
-}
-
-.timer-text strong {
-  color: var(--accent);
-  font-weight: 700;
-}
-
-.interstitial-skip-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.7rem 1.5rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  font-family: inherit;
-  color: #04222a;
-  background: linear-gradient(135deg, var(--accent), #1ab8d4);
-  border: none;
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: 0 2px 12px var(--accent-dim);
-}
-
-.interstitial-skip-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.interstitial-skip-btn:not(:disabled):hover,
-.interstitial-skip-btn:not(:disabled):focus-visible {
-  transform: scale(1.04);
-  box-shadow: 0 4px 20px var(--accent-glow);
-}
-
-/* ==================================================================== */
 /* Footer                                                                */
 /* ==================================================================== */
 .footer {
@@ -665,11 +616,6 @@ ul { list-style: none; margin: 0; padding: 0; }
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -713,24 +659,24 @@ ul { list-style: none; margin: 0; padding: 0; }
 
   .search-section {
     margin: 1rem 0 1.25rem;
+    max-width: 100%;
   }
 
   .search-section-text {
-    font-size: 0.85rem;
+    font-size: 0.95rem;
   }
 
   .search-bar-inner {
-    border-radius: var(--radius);
+    border-radius: var(--radius-full);
   }
 
   .search-btn {
-    padding: 0.65rem 0.85rem;
-    margin: 0.25rem;
-    border-radius: calc(var(--radius) - 4px);
+    padding: 0.7rem 0.9rem;
+    margin: 0.3rem;
   }
 
   .search-hint {
-    font-size: 0.65rem;
+    font-size: 0.68rem;
   }
 
   .avatar-wrap { width: 88px; height: 88px; }
@@ -748,15 +694,6 @@ ul { list-style: none; margin: 0; padding: 0; }
 
   .ad-banner-content {
     min-height: 66px;
-  }
-
-  .interstitial-card {
-    max-width: 95%;
-  }
-
-  .interstitial-ad-slot,
-  .interstitial-ad-content {
-    min-height: 180px;
   }
 }
 
@@ -779,9 +716,17 @@ ul { list-style: none; margin: 0; padding: 0; }
     margin: 0.75rem 0 1rem;
   }
 
+  .search-section-text {
+    font-size: 0.85rem;
+  }
+
   .search-input {
-    padding: 0.7rem 0.6rem;
-    font-size: 0.9rem;
+    padding: 0.8rem 0.6rem;
+    font-size: 0.95rem;
+  }
+
+  .search-icon {
+    margin-left: 0.85rem;
   }
 
   .link-button {
