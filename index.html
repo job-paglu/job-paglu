@@ -48,8 +48,8 @@
           class="avatar"
           src="assets/placeholder-avatar.svg"
           alt=""
-          width="112"
-          height="112"
+          width="72"
+          height="72"
           loading="eager"
           decoding="async"
         />
@@ -66,49 +66,35 @@
       <p id="bio" class="bio"></p>
     </header>
 
-    <!-- Premium Search Bar (HERO of the page) -->
-    <section class="search-section" id="search-section" aria-label="Search jobs">
-      <div class="search-section-label">
-        <svg class="search-section-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <span class="search-section-text">Find Your Next Job</span>
-      </div>
-      <div class="search-bar-wrap">
-        <div class="search-bar-inner">
-          <svg class="search-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input
-            type="text"
-            id="search-input"
-            class="search-input"
-            placeholder="Search jobs, companies, roles, categories..."
-            autocomplete="off"
-            spellcheck="false"
-            aria-label="Search jobs"
-          />
-          <button id="search-btn" class="search-btn" type="button" aria-label="Search">
-            <span class="search-btn-text">Search</span>
-            <svg class="search-btn-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-          </button>
-        </div>
-      </div>
-      <div class="search-hint">Press Enter or click Search</div>
-    </section>
+    <!-- Search Bar — compact, single row -->
+    <div class="search-bar" id="search-bar" aria-label="Search jobs">
+      <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input
+        type="text"
+        id="search-input"
+        class="search-input"
+        placeholder="Search jobs, companies, roles..."
+        autocomplete="off"
+        spellcheck="false"
+        aria-label="Search jobs"
+      />
+      <button id="search-btn" class="search-btn" type="button" aria-label="Search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        <span class="search-btn-text">Search</span>
+      </button>
+    </div>
 
     <!-- 3-Column Layout: Left Ad | Center Content | Right Ad -->
     <div class="content-layout" id="content-layout">
 
-      <!-- Left Sidebar Ad (shown only on search results, desktop) -->
+      <!-- Left Sidebar AdSense (desktop only, search results) -->
       <aside class="sidebar sidebar-left" id="sidebar-left" aria-label="Advertisement" hidden>
-        <div class="sidebar-ad-slot" id="sidebar-ad-left">
-          <div class="ad-label">Ad</div>
-          <div class="sidebar-ad-container">
-            <ins class="adsbygoogle"
-              style="display:block"
-              data-ad-client="ca-pub-3043505043619574"
-              data-ad-slot=""
-              data-ad-format="vertical"
-              data-full-width-responsive="true"></ins>
-          </div>
-        </div>
+        <ins class="adsbygoogle"
+          style="display:block"
+          data-ad-client="ca-pub-3043505043619574"
+          data-ad-slot=""
+          data-ad-format="vertical"
+          data-full-width-responsive="true"></ins>
       </aside>
 
       <!-- Center Content Area -->
@@ -119,7 +105,7 @@
           <div class="search-results-header">
             <h2 id="search-results-title" class="search-results-title"></h2>
             <button id="search-clear-btn" class="search-clear-btn" aria-label="Clear search">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               <span class="clear-btn-text">Clear</span>
             </button>
           </div>
@@ -141,19 +127,14 @@
 
       </div><!-- /content-center -->
 
-      <!-- Right Sidebar Ad (shown only on search results, desktop) -->
+      <!-- Right Sidebar AdSense (desktop only, search results) -->
       <aside class="sidebar sidebar-right" id="sidebar-right" aria-label="Advertisement" hidden>
-        <div class="sidebar-ad-slot" id="sidebar-ad-right">
-          <div class="ad-label">Ad</div>
-          <div class="sidebar-ad-container">
-            <ins class="adsbygoogle"
-              style="display:block"
-              data-ad-client="ca-pub-3043505043619574"
-              data-ad-slot=""
-              data-ad-format="vertical"
-              data-full-width-responsive="true"></ins>
-          </div>
-        </div>
+        <ins class="adsbygoogle"
+          style="display:block"
+          data-ad-client="ca-pub-3043505043619574"
+          data-ad-slot=""
+          data-ad-format="vertical"
+          data-full-width-responsive="true"></ins>
       </aside>
 
     </div><!-- /content-layout -->

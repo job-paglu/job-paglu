@@ -65,19 +65,14 @@ function pushSidebarAds() {
   sidebarAdsPushed = true;
 }
 
-// ─── Create inline ad banner <li> ─────────────────────────────────
+// ─── Create inline ad banner <li> — AdSense only, no visual chrome ──
 function createAdBannerLi(index) {
   const li = document.createElement('li');
   li.className = 'ad-banner-item';
-  li.style.animationDelay = `${Math.min(index * 50, 350)}ms`;
+  li.style.animationDelay = `${Math.min(index * 40, 250)}ms`;
 
   const banner = document.createElement('div');
   banner.className = 'ad-banner';
-
-  const label = document.createElement('div');
-  label.className = 'ad-banner-label';
-  label.textContent = 'AD';
-  banner.appendChild(label);
 
   const content = document.createElement('div');
   content.className = 'ad-banner-content';
@@ -86,7 +81,6 @@ function createAdBannerLi(index) {
   ins.className = 'adsbygoogle';
   ins.style.display = 'block';
   ins.style.width = '100%';
-  ins.style.minHeight = '50px';
   ins.setAttribute('data-ad-client', ADSENSE_CLIENT);
   ins.setAttribute('data-ad-slot', '');
   ins.setAttribute('data-ad-format', 'auto');
