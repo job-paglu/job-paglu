@@ -1,8 +1,9 @@
 // script.js — Job Paglu
 // Vanilla-JS renderer with:
-//  - Ad banners after every 3 links (accent-bordered, responsive)
-//  - Premium search bar with shortlink bypass interstitial
-//  - 3-column layout with sidebar ad slots (desktop)
+//  - Clean main page: no ads on page open, just links
+//  - Premium search bar at top (UI/UX priority)
+//  - Search → shortlink interstitial ad → bypass → results page with ads
+//  - Sidebar + inline ad banners appear only on search results page
 //  - Clean, professional UI — no placeholder/junk text
 
 const DATA_URL = 'data/profile.json';
@@ -142,7 +143,7 @@ function renderLinksIntoList(links, listEl) {
   });
 }
 
-// ─── Main link rendering ──────────────────────────────────────────
+// ─── Main link rendering (clean — no ads on page open) ───────────
 function renderLinks(links = []) {
   const list = document.getElementById('links-list');
   const emptyState = document.getElementById('empty-state');
@@ -151,9 +152,14 @@ function renderLinks(links = []) {
     return;
   }
   emptyState.hidden = true;
-  renderLinksIntoList(links, list);
-  // Push sidebar + inline ads after first render
-  pushSidebarAds();
+  // Render links WITHOUT ad banners — main page is clean
+  list.innerHTML = '';
+  links.forEach((link, index) => {
+    list.appendChild(createLinkLi(link, index));
+  });
+  // Hide sidebars on main page (no ads on page open)
+  hideEl('sidebar-left');
+  hideEl('sidebar-right');
 }
 
 // ─── Search: filtering ────────────────────────────────────────────
@@ -181,7 +187,7 @@ function decodeShortlink(hash) {
   return null;
 }
 
-// ─── Search: render results ───────────────────────────────────────
+// ─── Search: render results (WITH ads — this is the results page) ─
 function renderSearchResults(query, results) {
   const resultsContainer = document.getElementById('search-results');
   const resultsList = document.getElementById('search-results-list');
@@ -198,6 +204,11 @@ function renderSearchResults(query, results) {
     renderLinksIntoList(results, resultsList);
   }
   resultsContainer.hidden = false;
+
+  // Show sidebars on search results page (ads visible here)
+  showEl('sidebar-left');
+  showEl('sidebar-right');
+  pushSidebarAds();
 }
 
 // ─── Interstitial ad overlay ──────────────────────────────────────
@@ -248,17 +259,19 @@ function executeSearch(query) {
   showInterstitial(currentQuery, () => {
     hideEl('links');
     renderSearchResults(currentQuery, results);
-    pushSidebarAds();
   });
 }
 
-// ─── Search: clear ────────────────────────────────────────────────
+// ─── Search: clear (back to clean main page) ──────────────────────
 function clearSearch() {
   currentQuery = '';
   const searchInput = document.getElementById('search-input');
   if (searchInput) searchInput.value = '';
   hideEl('search-results');
   showEl('links');
+  // Hide sidebars when returning to main page (no ads)
+  hideEl('sidebar-left');
+  hideEl('sidebar-right');
   if (window.location.hash.startsWith('#search=')) {
     history.replaceState(null, '', window.location.pathname);
   }

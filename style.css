@@ -174,13 +174,32 @@ ul { list-style: none; margin: 0; padding: 0; }
 }
 
 /* ==================================================================== */
-/* Premium Search Bar                                                    */
+/* Premium Search Section (top UI/UX priority)                          */
 /* ==================================================================== */
-.search-bar {
+.search-section {
   width: 100%;
   max-width: var(--content-width);
-  margin: 0.5rem 0 1.25rem;
+  margin: 1.25rem 0 1.5rem;
   animation: fade-in-up 0.55s ease both;
+}
+
+.search-section-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.search-section-icon {
+  color: var(--accent);
+}
+
+.search-section-text {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.02em;
 }
 
 .search-bar-inner {
@@ -188,17 +207,17 @@ ul { list-style: none; margin: 0; padding: 0; }
   align-items: center;
   gap: 0;
   background: var(--surface);
-  border: 1.5px solid var(--border);
+  border: 2px solid var(--accent-dim);
   border-radius: var(--radius-lg);
   padding: 0;
   transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
   overflow: hidden;
-  box-shadow: var(--shadow);
+  box-shadow: 0 4px 24px var(--accent-dim), var(--shadow);
 }
 
 .search-bar-inner:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-dim), var(--shadow-lg);
+  box-shadow: 0 0 0 4px var(--accent-dim), 0 8px 32px var(--accent-glow), var(--shadow-lg);
   background: var(--surface-hover);
 }
 
@@ -216,8 +235,8 @@ ul { list-style: none; margin: 0; padding: 0; }
 
 .search-input {
   flex: 1;
-  padding: 0.8rem 0.75rem;
-  font-size: 0.95rem;
+  padding: 1rem 0.75rem;
+  font-size: 1rem;
   font-family: inherit;
   color: var(--text);
   background: transparent;
@@ -235,24 +254,24 @@ ul { list-style: none; margin: 0; padding: 0; }
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  padding: 0.65rem 1.2rem;
-  margin: 0.3rem;
-  font-size: 0.9rem;
-  font-weight: 600;
+  padding: 0.75rem 1.4rem;
+  margin: 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 700;
   font-family: inherit;
   color: #04222a;
   background: linear-gradient(135deg, var(--accent), #1ab8d4);
   border: none;
-  border-radius: calc(var(--radius-lg) - 4px);
+  border-radius: calc(var(--radius-lg) - 6px);
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px var(--accent-dim);
+  box-shadow: 0 2px 12px var(--accent-dim);
 }
 
 .search-btn:hover, .search-btn:focus-visible {
-  transform: scale(1.03);
-  box-shadow: 0 4px 16px var(--accent-glow);
+  transform: scale(1.04);
+  box-shadow: 0 6px 20px var(--accent-glow);
 }
 
 .search-btn:active {
@@ -261,6 +280,14 @@ ul { list-style: none; margin: 0; padding: 0; }
 
 .search-btn-text {
   display: inline;
+}
+
+.search-hint {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+  opacity: 0.7;
 }
 
 /* ==================================================================== */
@@ -654,10 +681,10 @@ ul { list-style: none; margin: 0; padding: 0; }
 }
 
 /* ==================================================================== */
-/* Responsive — Desktop (>1024px): full 3-column                         */
+/* Responsive — Desktop (>1024px): full 3-column (sidebars for results) */
 /* ==================================================================== */
 @media (min-width: 1025px) {
-  .sidebar { display: flex; }
+  .sidebar:not([hidden]) { display: flex; }
   .search-btn-text { display: inline; }
   .clear-btn-text { display: inline; }
   .avatar-wrap { width: 112px; height: 112px; }
@@ -684,6 +711,14 @@ ul { list-style: none; margin: 0; padding: 0; }
   .search-btn-text { display: none; }
   .clear-btn-text { display: none; }
 
+  .search-section {
+    margin: 1rem 0 1.25rem;
+  }
+
+  .search-section-text {
+    font-size: 0.85rem;
+  }
+
   .search-bar-inner {
     border-radius: var(--radius);
   }
@@ -692,6 +727,10 @@ ul { list-style: none; margin: 0; padding: 0; }
     padding: 0.65rem 0.85rem;
     margin: 0.25rem;
     border-radius: calc(var(--radius) - 4px);
+  }
+
+  .search-hint {
+    font-size: 0.65rem;
   }
 
   .avatar-wrap { width: 88px; height: 88px; }
@@ -735,6 +774,10 @@ ul { list-style: none; margin: 0; padding: 0; }
 
   .avatar-wrap { width: 80px; height: 80px; }
   .name { font-size: 1.1rem; }
+
+  .search-section {
+    margin: 0.75rem 0 1rem;
+  }
 
   .search-input {
     padding: 0.7rem 0.6rem;
