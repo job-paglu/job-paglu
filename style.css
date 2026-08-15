@@ -275,6 +275,304 @@ ul {
 }
 
 /* -------------------------------------------------------------------- */
+/* Search Bar                                                             */
+/* -------------------------------------------------------------------- */
+.search-bar {
+  display: flex;
+  width: 100%;
+  gap: 0.5rem;
+  margin: 0.75rem 0 1rem;
+  animation: fade-in-up 0.5s ease both;
+}
+
+.search-input {
+  flex: 1;
+  padding: 0.7rem 1rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  outline: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-input:focus {
+  border-color: var(--accent);
+  background: var(--surface-hover);
+}
+
+.search-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: var(--accent);
+  color: #04222a;
+  border: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  flex-shrink: 0;
+}
+
+.search-btn:hover,
+.search-btn:focus-visible {
+  transform: scale(1.05);
+  opacity: 0.9;
+}
+
+.search-btn:active {
+  transform: scale(0.95);
+}
+
+/* -------------------------------------------------------------------- */
+/* Search Results                                                         */
+/* -------------------------------------------------------------------- */
+.search-results {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.search-results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  padding: 0 0.25rem;
+}
+
+.search-results-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 0;
+}
+
+.search-clear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.search-clear-btn:hover,
+.search-clear-btn:focus-visible {
+  background: var(--surface-hover);
+  transform: scale(1.1);
+}
+
+/* -------------------------------------------------------------------- */
+/* Ad Banner (inline between links)                                       */
+/* -------------------------------------------------------------------- */
+.ad-banner-item {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  transform: translateY(8px);
+  animation: fade-in-up 0.45s ease forwards;
+}
+
+.ad-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  min-height: 80px;
+  padding: 0.5rem;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  position: relative;
+}
+
+.ad-banner-label {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: var(--surface-hover);
+  padding: 0.15rem 0.4rem;
+  border-radius: 0 0 0 8px;
+  z-index: 2;
+}
+
+.ad-banner-content {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+}
+
+/* Mobile-specific: taller banners, more prominent border */
+@media (max-width: 480px) {
+  .ad-banner {
+    min-height: 100px;
+    border-width: 2.5px;
+    padding: 0.6rem;
+  }
+
+  .ad-banner-content {
+    min-height: 76px;
+  }
+
+  .ad-banner-label {
+    font-size: 0.55rem;
+    padding: 0.2rem 0.5rem;
+  }
+}
+
+/* Desktop: slightly shorter banners */
+@media (min-width: 481px) {
+  .ad-banner {
+    min-height: 70px;
+  }
+
+  .ad-banner-content {
+    min-height: 50px;
+  }
+}
+
+/* -------------------------------------------------------------------- */
+/* Interstitial Overlay (Shortlink Bypass Ad)                              */
+/* -------------------------------------------------------------------- */
+.interstitial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: fade-in 0.3s ease;
+}
+
+.interstitial-card {
+  width: 92%;
+  max-width: 420px;
+  background: var(--bg-start);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+}
+
+.interstitial-ad-slot {
+  position: relative;
+  width: 100%;
+  min-height: 200px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.interstitial-ad-label {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: var(--surface-hover);
+  padding: 0.2rem 0.5rem;
+  border-radius: 0 0 0 8px;
+  z-index: 2;
+}
+
+.interstitial-ad-content {
+  width: 100%;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.interstitial-ad-placeholder {
+  width: 100%;
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.interstitial-info {
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.interstitial-shortlink {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0 0 0.5rem;
+  word-break: break-all;
+}
+
+.interstitial-wait {
+  font-size: 0.9rem;
+  color: var(--text);
+  margin: 0 0 1rem;
+}
+
+.interstitial-skip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.7rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #04222a;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.interstitial-skip-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.interstitial-skip-btn:not(:disabled):hover,
+.interstitial-skip-btn:not(:disabled):focus-visible {
+  transform: scale(1.05);
+  opacity: 0.9;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* -------------------------------------------------------------------- */
 /* Footer                                                                 */
 /* -------------------------------------------------------------------- */
 .footer {
