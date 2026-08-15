@@ -1,10 +1,5 @@
 // script.js — Job Paglu
-// Vanilla-JS renderer with:
-//  - Clean main page: no ads on page open, just links
-//  - Premium search bar at top (HERO — UI/UX priority)
-//  - Search → sets #search=BASE64 hash → shortlink service shows ad → redirects back → auto-execute
-//  - Sidebar + inline ad banners appear only on search results page
-//  - Clean, professional UI — no placeholder/junk text
+// Simple search bar that filters links in-place (case-insensitive)
 
 const DATA_URL = 'data/profile.json';
 const ADSENSE_CLIENT = 'ca-pub-3043505043619574';
@@ -12,7 +7,6 @@ const LINKS_PER_AD = 3;
 
 // ─── Globals ──────────────────────────────────────────────────────
 let allLinks = [];
-let currentQuery = '';
 let sidebarAdsPushed = false;
 
 // ─── Data loading ─────────────────────────────────────────────────
@@ -60,12 +54,12 @@ function pushAd() {
 // ─── Sidebar ads ──────────────────────────────────────────────────
 function pushSidebarAds() {
   if (sidebarAdsPushed) return;
-  pushAd(); // left sidebar
-  pushAd(); // right sidebar
+  pushAd(); // left
+  pushAd(); // right
   sidebarAdsPushed = true;
 }
 
-// ─── Create inline ad banner <li> — AdSense only, no visual chrome ──
+// ─── Create inline ad banner <li> ─────────────────────────────────
 function createAdBannerLi(index) {
   const li = document.createElement('li');
   li.className = 'ad-banner-item';
@@ -96,7 +90,7 @@ function createAdBannerLi(index) {
 function createLinkLi(link, index) {
   const li = document.createElement('li');
   li.className = 'link-item';
-  li.style.animationDelay = `${Math.min(index * 50, 350)}ms`;
+  li.style.animationDelay = `${Math.min(index * 40, 300)}ms`;
 
   const a = document.createElement('a');
   a.className = 'link-button';
@@ -125,18 +119,18 @@ function createLinkLi(link, index) {
   return li;
 }
 
-// ─── Render links list with interleaved ad banners ────────────────
-function renderLinksIntoList(links, listEl) {
+// ─── Render links with interleaved ad banners ────────────────────
+function renderLinksIntoList(links, listEl, withAds) {
   listEl.innerHTML = '';
   links.forEach((link, index) => {
     listEl.appendChild(createLinkLi(link, index));
-    if ((index + 1) % LINKS_PER_AD === 0 && index < links.length - 1) {
+    if (withAds && (index + 1) % LINKS_PER_AD === 0 && index < links.length - 1) {
       listEl.appendChild(createAdBannerLi(index));
     }
   });
 }
 
-// ─── Main link rendering (clean — no ads on page open) ───────────
+// ─── Main link rendering (no ads) ────────────────────────────────
 function renderLinks(links = []) {
   const list = document.getElementById('links-list');
   const emptyState = document.getElementById('empty-state');
@@ -145,17 +139,12 @@ function renderLinks(links = []) {
     return;
   }
   emptyState.hidden = true;
-  // Render links WITHOUT ad banners — main page is clean
-  list.innerHTML = '';
-  links.forEach((link, index) => {
-    list.appendChild(createLinkLi(link, index));
-  });
-  // Hide sidebars on main page (no ads on page open)
+  renderLinksIntoList(links, list, false);
   hideEl('sidebar-left');
   hideEl('sidebar-right');
 }
 
-// ─── Search: filtering ────────────────────────────────────────────
+// ─── Search: case-insensitive filter ─────────────────────────────
 function filterLinks(query, links) {
   if (!query.trim()) return links;
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
@@ -165,7 +154,73 @@ function filterLinks(query, links) {
   });
 }
 
-// ─── Search: shortlink generation ─────────────────────────────────
+// ─── Search: execute filter in-place ─────────────────────────────
+function executeSearch(query) {
+  const list = document.getElementById('links-list');
+  const emptyState = document.getElementById('empty-state');
+  const resultsCount = document.getElementById('results-count');
+
+  if (!query.trim()) {
+    // Empty query — show all links (no ads)
+    renderLinksIntoList(allLinks, list, false);
+    emptyState.hidden = true;
+    hideEl('sidebar-left');
+    hideEl('sidebar-right');
+    if (resultsCount) resultsCount.hidden = true;
+    return;
+  }
+
+  const results = filterLinks(query, allLinks);
+
+  if (results.length === 0) {
+    list.innerHTML = '';
+    emptyState.hidden = false;
+  } else {
+    emptyState.hidden = true;
+    renderLinksIntoList(results, list, true);
+    // Show sidebars when filtering (with ads)
+    showEl('sidebar-left');
+    showEl('sidebar-right');
+    pushSidebarAds();
+  }
+
+  // Show results count
+  if (resultsCount) {
+    resultsCount.textContent = `${results.length} result${results.length !== 1 ? 's' : ''} for "${query}"`;
+    resultsCount.hidden = false;
+  }
+}
+
+// ─── Search: event listeners ──────────────────────────────────────
+function initSearch() {
+  const searchInput = document.getElementById('search-input');
+  const searchBtn = document.getElementById('search-btn');
+
+  function doSearch() {
+    const q = searchInput ? searchInput.value : '';
+    executeSearch(q);
+  }
+
+  if (searchBtn) searchBtn.addEventListener('click', doSearch);
+
+  if (searchInput) {
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doSearch();
+    });
+    // Live filter as user types
+    searchInput.addEventListener('input', doSearch);
+  }
+}
+
+// ─── Last updated ─────────────────────────────────────────────────
+function renderLastUpdated(generatedAt) {
+  if (!generatedAt) return;
+  const date = new Date(generatedAt);
+  if (Number.isNaN(date.getTime())) return;
+  setText('last-updated', `Last updated ${date.toLocaleString()}`);
+}
+
+// ─── Shortlink hash support (for external shortlink services) ─────
 function generateShortlink(query) {
   const encoded = btoa(unescape(encodeURIComponent(query)));
   const base = window.location.origin + window.location.pathname;
@@ -180,126 +235,12 @@ function decodeShortlink(hash) {
   return null;
 }
 
-// ─── Search: render results (WITH ads — this is the results page) ─
-function renderSearchResults(query, results) {
-  const resultsContainer = document.getElementById('search-results');
-  const resultsList = document.getElementById('search-results-list');
-  const resultsTitle = document.getElementById('search-results-title');
-  const searchEmpty = document.getElementById('search-empty-state');
-
-  resultsTitle.textContent = `${results.length} result${results.length !== 1 ? 's' : ''} for "${query}"`;
-  resultsList.innerHTML = '';
-
-  if (results.length === 0) {
-    searchEmpty.hidden = false;
-  } else {
-    searchEmpty.hidden = true;
-    renderLinksIntoList(results, resultsList);
-  }
-  resultsContainer.hidden = false;
-
-  // Show sidebars on search results page (ads visible here)
-  showEl('sidebar-left');
-  showEl('sidebar-right');
-  pushSidebarAds();
-}
-
-// ─── Search: execute (no interstitial — direct hash-based) ────────
-function executeSearch(query) {
-  if (!query.trim()) return;
-  currentQuery = query.trim();
-
-  // Set the hash so the URL becomes #search=BASE64ENCODEDQUERY
-  // This is the URL the user will feed to their shortlink service
-  const encoded = btoa(unescape(encodeURIComponent(currentQuery)));
-  const targetHash = `#search=${encoded}`;
-
-  // Only update hash if it's different (avoid redundant hashchange)
-  if (window.location.hash !== targetHash) {
-    window.location.hash = targetHash;
-    // hashchange event will trigger executeSearchFromHash
-    return;
-  }
-
-  // If hash is already set (e.g. from hashchange or page load), render directly
-  const results = filterLinks(currentQuery, allLinks);
-  hideEl('links');
-  renderSearchResults(currentQuery, results);
-}
-
-// ─── Search: execute from hash (called by hashchange & checkHashShortlink) ──
-function executeSearchFromHash() {
-  const query = decodeShortlink(window.location.hash);
-  if (query) {
-    currentQuery = query;
-    const searchInput = document.getElementById('search-input');
-    if (searchInput) searchInput.value = query;
-
-    const results = filterLinks(query, allLinks);
-    hideEl('links');
-    renderSearchResults(query, results);
-  }
-}
-
-// ─── Search: clear (back to clean main page) ──────────────────────
-function clearSearch() {
-  currentQuery = '';
-  const searchInput = document.getElementById('search-input');
-  if (searchInput) searchInput.value = '';
-  hideEl('search-results');
-  showEl('links');
-  // Hide sidebars when returning to main page (no ads)
-  hideEl('sidebar-left');
-  hideEl('sidebar-right');
-  if (window.location.hash.startsWith('#search=')) {
-    history.replaceState(null, '', window.location.pathname);
-  }
-}
-
-// ─── Search: event listeners ──────────────────────────────────────
-function initSearch() {
-  const searchInput = document.getElementById('search-input');
-  const searchBtn = document.getElementById('search-btn');
-  const clearBtn = document.getElementById('search-clear-btn');
-
-  if (searchBtn) {
-    searchBtn.addEventListener('click', () => {
-      const q = searchInput?.value || '';
-      if (q.trim()) executeSearch(q);
-    });
-  }
-
-  if (searchInput) {
-    searchInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        const q = searchInput.value || '';
-        if (q.trim()) executeSearch(q);
-      }
-    });
-  }
-
-  if (clearBtn) clearBtn.addEventListener('click', clearSearch);
-}
-
-// ─── Last updated ─────────────────────────────────────────────────
-function renderLastUpdated(generatedAt) {
-  if (!generatedAt) return;
-  const date = new Date(generatedAt);
-  if (Number.isNaN(date.getTime())) return;
-  setText('last-updated', `Last updated ${date.toLocaleString()}`);
-}
-
-// ─── Hash shortlink check (on page load) ─────────────────────────
 function checkHashShortlink() {
   const query = decodeShortlink(window.location.hash);
   if (query) {
     const searchInput = document.getElementById('search-input');
     if (searchInput) searchInput.value = query;
-    // Auto-execute search directly (no interstitial)
-    currentQuery = query;
-    const results = filterLinks(query, allLinks);
-    hideEl('links');
-    renderSearchResults(query, results);
+    executeSearch(query);
     return true;
   }
   return false;
@@ -324,13 +265,17 @@ async function init() {
     initSearch();
     checkHashShortlink();
 
-    // Listen for hash changes (e.g. shortlink redirect back)
+    // Hash change listener (for shortlink service redirects)
     window.addEventListener('hashchange', () => {
       const query = decodeShortlink(window.location.hash);
       if (query) {
-        executeSearchFromHash();
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) searchInput.value = query;
+        executeSearch(query);
       } else {
-        clearSearch();
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) searchInput.value = '';
+        executeSearch('');
       }
     });
 

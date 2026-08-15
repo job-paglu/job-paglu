@@ -100,28 +100,16 @@
       <!-- Center Content Area -->
       <div class="content-center" id="content-center">
 
-        <!-- Search Results (hidden by default) -->
-        <div id="search-results" class="search-results" hidden>
-          <div class="search-results-header">
-            <h2 id="search-results-title" class="search-results-title"></h2>
-            <button id="search-clear-btn" class="search-clear-btn" aria-label="Clear search">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              <span class="clear-btn-text">Clear</span>
-            </button>
-          </div>
-          <ul id="search-results-list" class="links-list"></ul>
-          <p id="search-empty-state" class="empty-state" hidden>
-            No jobs found. Try different keywords.
-          </p>
-        </div>
+        <!-- Results count (shown when filtering) -->
+        <div id="results-count" class="results-count" hidden></div>
 
-        <!-- Main Links List -->
+        <!-- Links List (filtered in-place by search) -->
         <main id="links" class="links" aria-label="Links">
           <ul id="links-list" class="links-list">
             <!-- Populated at runtime from data/profile.json by script.js -->
           </ul>
           <p id="empty-state" class="empty-state" hidden>
-            No links available yet. Check back soon.
+            No jobs found. Try different keywords.
           </p>
         </main>
 
