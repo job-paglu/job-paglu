@@ -1,43 +1,104 @@
 /* ==================================================================== */
 /* Design tokens                                                         */
+/*                                                                       */
+/* Sizing is fluid (clamp) rather than stepped, so the layout is correct */
+/* at *any* viewport width — including the in-between sizes that fixed   */
+/* breakpoints miss (foldables, split-screen, 3:2 tablets, ultrawides).  */
+/* Media queries below only handle genuine layout *mode* changes.        */
 /* ==================================================================== */
 :root {
-  color-scheme: light dark;
+  color-scheme: dark light;
 
-  --bg-start: #0a0a0f;
-  --bg-end: #151520;
-  --surface: rgba(255, 255, 255, 0.05);
-  --surface-hover: rgba(255, 255, 255, 0.1);
-  --text: #f0f0f5;
-  --text-muted: #8a8a98;
-  --border: rgba(255, 255, 255, 0.1);
-  --accent: #22d1ee;
-  --accent-dim: rgba(34, 209, 238, 0.15);
-  --accent-glow: rgba(34, 209, 238, 0.3);
-  --shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.4);
-  --radius: 12px;
-  --radius-lg: 16px;
-  --max-width: 1200px;
-  --content-width: 540px;
-  --sidebar-width: 160px;
-  --sidebar-gap: 20px;
+  /* Surfaces */
+  --bg: #08080c;
+  --bg-soft: #101018;
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface-hover: rgba(255, 255, 255, 0.085);
+  --surface-solid: #14141d;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.18);
+
+  /* Text */
+  --text: #eef0f6;
+  --text-dim: #a4a9bb;
+  --text-mute: #737890;
+
+  /* Brand */
+  --accent: #22d3ee;
+  --accent-2: #818cf8;
+  --accent-ink: #04222a;
+  --accent-dim: rgba(34, 211, 238, 0.15);
+  --accent-glow: rgba(34, 211, 238, 0.35);
+  --mark-bg: rgba(34, 211, 238, 0.22);
+  --mark-text: #b8f4ff;
+
+  /* Depth */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 12px 34px rgba(0, 0, 0, 0.45);
+
+  /* Shape */
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+
+  /* Fluid type scale */
+  --fs-xs: clamp(0.688rem, 0.66rem + 0.14vw, 0.75rem);
+  --fs-sm: clamp(0.75rem, 0.72rem + 0.16vw, 0.825rem);
+  --fs-base: clamp(0.875rem, 0.85rem + 0.18vw, 0.95rem);
+  --fs-md: clamp(0.95rem, 0.91rem + 0.22vw, 1.05rem);
+  --fs-lg: clamp(1.15rem, 1.02rem + 0.62vw, 1.6rem);
+
+  /* Fluid spacing */
+  --space-1: clamp(0.25rem, 0.22rem + 0.16vw, 0.375rem);
+  --space-2: clamp(0.4rem, 0.35rem + 0.24vw, 0.6rem);
+  --space-3: clamp(0.6rem, 0.5rem + 0.4vw, 0.9rem);
+  --space-4: clamp(0.85rem, 0.7rem + 0.6vw, 1.35rem);
+  --space-5: clamp(1.2rem, 0.95rem + 1vw, 2rem);
+
+  /* Layout */
+  --max-width: 1240px;
+  --content-max: 760px;
+  --sidebar-width: 170px;
+  --sidebar-gap: clamp(1rem, 0.5rem + 1.4vw, 1.75rem);
+  --card-min: 300px;
+
+  /* Comfortable minimum hit area on touch devices (WCAG 2.5.8) */
+  --tap: 44px;
+
+  /* Notch / rounded-display insets, zero on hardware without them */
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
 }
 
 @media (prefers-color-scheme: light) {
   :root {
-    --bg-start: #f5f5fa;
-    --bg-end: #e8e8f0;
-    --surface: rgba(0, 0, 0, 0.03);
-    --surface-hover: rgba(0, 0, 0, 0.06);
-    --text: #1a1a2e;
-    --text-muted: #6b6b80;
-    --border: rgba(0, 0, 0, 0.08);
-    --accent: #0e7c93;
-    --accent-dim: rgba(14, 124, 147, 0.12);
-    --accent-glow: rgba(14, 124, 147, 0.2);
-    --shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
-    --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.08);
+    --bg: #f7f8fc;
+    --bg-soft: #ffffff;
+    --surface: #ffffff;
+    --surface-hover: #ffffff;
+    --surface-solid: #ffffff;
+    --border: rgba(16, 24, 40, 0.1);
+    --border-strong: rgba(16, 24, 40, 0.22);
+
+    --text: #12141d;
+    --text-dim: #4b5163;
+    --text-mute: #6c7288;
+
+    --accent: #0b7c93;
+    --accent-2: #4f46e5;
+    --accent-ink: #ffffff;
+    --accent-dim: rgba(11, 124, 147, 0.12);
+    --accent-glow: rgba(11, 124, 147, 0.25);
+    --mark-bg: rgba(11, 124, 147, 0.16);
+    --mark-text: #064652;
+
+    --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+    --shadow: 0 4px 14px rgba(16, 24, 40, 0.08);
+    --shadow-lg: 0 12px 30px rgba(16, 24, 40, 0.12);
   }
 }
 
@@ -46,44 +107,77 @@
 /* ==================================================================== */
 *,
 *::before,
-*::after {
-  box-sizing: border-box;
-}
+*::after { box-sizing: border-box; }
 
 html {
   -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  /* Anchor jumps clear the sticky search bar */
+  scroll-padding-top: 5.5rem;
 }
 
 body {
   margin: 0;
+  min-height: 100vh;
   min-height: 100dvh;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
     Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-  color: var(--text);
-  background: var(--bg-start);
-  background-image: radial-gradient(ellipse at 50% 0%, var(--bg-end) 0%, var(--bg-start) 70%);
-  background-attachment: fixed;
+  font-size: var(--fs-base);
   line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Never allow sideways scroll, whatever a long unbroken URL/title does.
+     `clip` rather than `hidden` on purpose: `hidden` turns body into a
+     scroll container, which silently breaks `position: sticky` on the
+     search bar. `clip` does not. */
+  overflow-x: clip;
+  overscroll-behavior-y: none;
 }
 
 img { max-width: 100%; display: block; }
 a { color: inherit; text-decoration: none; }
 ul { list-style: none; margin: 0; padding: 0; }
+button { font: inherit; }
+
+/* A fixed decorative layer instead of `background-attachment: fixed`,
+   which forces a full repaint on every scroll frame in mobile Safari. */
+.bg-decor {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60ch 40ch at 50% -10%, var(--accent-dim) 0%, transparent 60%),
+    radial-gradient(50ch 40ch at 100% 0%, rgba(129, 140, 248, 0.1) 0%, transparent 55%),
+    linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 45%);
+}
 
 /* ==================================================================== */
-/* Accessibility                                                         */
+/* Accessibility helpers                                                 */
 /* ==================================================================== */
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 .skip-link {
   position: absolute;
   left: -9999px;
   top: 0;
   background: var(--accent);
-  color: #04222a;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0 0 8px 0;
+  color: var(--accent-ink);
+  padding: 0.6rem 0.9rem;
+  border-radius: 0 0 var(--radius-sm) 0;
   z-index: 100;
-  font-weight: 600;
+  font-weight: 700;
 }
 .skip-link:focus { left: 0; }
 
@@ -94,21 +188,23 @@ ul { list-style: none; margin: 0; padding: 0; }
 }
 
 /* ==================================================================== */
-/* Page layout — tight                                                   */
+/* Page shell                                                            */
 /* ==================================================================== */
 .page {
   width: 100%;
   max-width: var(--max-width);
-  margin: 0 auto;
-  padding: 1rem 1rem 1.5rem;
+  margin-inline: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
+  min-height: 100vh;
   min-height: 100dvh;
+  padding-block: var(--space-4) calc(var(--space-5) + var(--safe-b));
+  padding-inline: calc(var(--space-4) + var(--safe-l)) calc(var(--space-4) + var(--safe-r));
 }
 
 /* ==================================================================== */
-/* Profile header — compact                                              */
+/* Profile header                                                        */
 /* ==================================================================== */
 .profile {
   display: flex;
@@ -116,18 +212,19 @@ ul { list-style: none; margin: 0; padding: 0; }
   align-items: center;
   text-align: center;
   width: 100%;
-  max-width: var(--content-width);
+  max-width: var(--content-max);
   animation: fade-in-up 0.4s ease both;
 }
 
 .avatar-wrap {
-  width: 64px;
-  height: 64px;
+  width: clamp(52px, 4vw + 40px, 76px);
+  aspect-ratio: 1;
   border-radius: 50%;
   padding: 2px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-dim), transparent 70%);
-  margin-bottom: 0.4rem;
-  box-shadow: 0 0 12px var(--accent-dim);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2) 55%, transparent 85%);
+  box-shadow: 0 0 0 1px var(--border), 0 6px 20px rgba(0, 0, 0, 0.28);
+  margin-bottom: var(--space-2);
+  flex-shrink: 0;
 }
 
 .avatar {
@@ -135,56 +232,98 @@ ul { list-style: none; margin: 0; padding: 0; }
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid var(--bg-start);
-  background: var(--surface);
+  border: 2px solid var(--bg);
+  background: var(--surface-solid);
 }
 
 .name {
-  font-size: 1.1rem;
-  font-weight: 700;
-  margin: 0 0 0.1rem;
-  word-break: break-word;
-  letter-spacing: -0.01em;
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .handle {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   color: var(--accent);
   font-weight: 600;
-  font-size: 0.8rem;
-  margin-bottom: 0.15rem;
-  text-decoration: none;
+  font-size: var(--fs-sm);
+  margin-top: var(--space-1);
+  padding: 0.2rem 0.15rem;
   transition: opacity 0.15s ease;
 }
-.handle:hover, .handle:focus-visible {
-  opacity: 0.8;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
+.handle-icon { flex-shrink: 0; }
 
 .bio {
-  color: var(--text-muted);
-  font-size: 0.82rem;
-  max-width: 42ch;
-  margin: 0;
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  max-width: 46ch;
+  margin: var(--space-1) 0 0;
   white-space: pre-line;
+  text-wrap: pretty;
+}
+
+/* Live listing count */
+.stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: var(--space-2) 0 0;
+  padding: 0.25rem 0.7rem;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+}
+.stat-pill[hidden] { display: none; }
+
+.stat-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.18);
+  flex-shrink: 0;
 }
 
 /* ==================================================================== */
-/* Search Bar — compact single row                                       */
+/* Search — sticky so it stays reachable through a long list             */
 /* ==================================================================== */
+.search-shell {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  width: 100%;
+  max-width: var(--content-max);
+  padding-block: var(--space-3);
+  margin-bottom: var(--space-1);
+  /* Translucent band so cards read as passing *under* the bar. The shell
+     is exactly as wide as the card column, so nothing shows beside it. */
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Browsers without color-mix still need an opaque-enough backdrop */
+@supports not (background: color-mix(in srgb, red 50%, blue)) {
+  .search-shell { background: var(--bg); }
+}
+
 .search-bar {
   display: flex;
   align-items: center;
   width: 100%;
-  max-width: var(--content-width);
-  margin: 0.5rem 0 0.75rem;
-  background: var(--surface);
+  background: var(--surface-solid);
   border: 1.5px solid var(--border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   box-shadow: var(--shadow);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .search-bar:focus-within {
@@ -194,68 +333,71 @@ ul { list-style: none; margin: 0; padding: 0; }
 
 .search-icon {
   flex-shrink: 0;
-  color: var(--text-muted);
-  margin-left: 0.75rem;
+  color: var(--text-mute);
+  margin-inline-start: var(--space-3);
   pointer-events: none;
   transition: color 0.2s ease;
 }
-
-.search-bar:focus-within .search-icon {
-  color: var(--accent);
-}
+.search-bar:focus-within .search-icon { color: var(--accent); }
 
 .search-input {
   flex: 1;
-  padding: 0.6rem 0.5rem;
-  font-size: 0.9rem;
+  min-width: 0;
+  padding: 0.7rem var(--space-2);
+  /* MUST stay >= 16px: anything smaller makes iOS Safari zoom the whole
+     page in when the field is focused, which then can't be zoomed back. */
+  font-size: max(16px, var(--fs-base));
   font-family: inherit;
   color: var(--text);
   background: transparent;
   border: none;
   outline: none;
-  min-width: 0;
+  min-height: var(--tap);
 }
+.search-input::placeholder { color: var(--text-mute); }
+/* Suppress the native "search" widgets so ours is the only clear button */
+.search-input::-webkit-search-decoration,
+.search-input::-webkit-search-cancel-button,
+.search-input::-webkit-search-results-button { -webkit-appearance: none; appearance: none; }
 
-.search-input::placeholder {
-  color: var(--text-muted);
-  opacity: 0.6;
+.search-clear {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  color: var(--text-mute);
+  background: var(--surface);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
 }
+.search-clear[hidden] { display: none; }
 
 .search-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
-  padding: 0.55rem 1rem;
-  font-size: 0.85rem;
-  font-weight: 700;
-  font-family: inherit;
-  color: #04222a;
-  background: linear-gradient(135deg, var(--accent), #1ab8d4);
-  border: none;
-  border-radius: var(--radius);
-  cursor: pointer;
+  gap: 0.4rem;
   flex-shrink: 0;
-  margin: 0.25rem;
-  box-shadow: 0 2px 8px var(--accent-dim);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  min-height: calc(var(--tap) - 8px);
+  padding-inline: clamp(0.7rem, 0.4rem + 1vw, 1.1rem);
+  margin: 4px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--accent-ink);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border: none;
+  border-radius: calc(var(--radius-lg) - 5px);
+  cursor: pointer;
+  box-shadow: 0 2px 10px var(--accent-dim);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
 }
-
-.search-btn:hover, .search-btn:focus-visible {
-  transform: scale(1.03);
-  box-shadow: 0 4px 16px var(--accent-glow);
-}
-
-.search-btn:active {
-  transform: scale(0.97);
-}
-
-.search-btn-text {
-  display: inline;
-}
+.search-btn:active { transform: scale(0.96); }
 
 /* ==================================================================== */
-/* 3-Column Layout: Left Sidebar | Center Content | Right Sidebar         */
+/* 3-column layout: ad | content | ad                                    */
 /* ==================================================================== */
 .content-layout {
   display: flex;
@@ -266,238 +408,380 @@ ul { list-style: none; margin: 0; padding: 0; }
 }
 
 .content-center {
-  flex: 0 1 var(--content-width);
-  max-width: var(--content-width);
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: var(--content-max);
   min-width: 0;
 }
 
-/* Sidebar — just a container for AdSense, no visual chrome */
+/* Sidebars are ad containers only — no chrome of their own. Hidden until
+   a viewport is genuinely wide enough to spare the space (see @media). */
 .sidebar {
+  display: none;
   flex: 0 0 var(--sidebar-width);
   position: sticky;
-  top: 0.5rem;
+  top: calc(var(--tap) + var(--space-5));
+  min-width: 0;
 }
 
 /* ==================================================================== */
-/* Links                                                                 */
+/* Results meta row                                                      */
 /* ==================================================================== */
-.links {
-  width: 100%;
+.results-count {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-bottom: var(--space-2);
+  min-height: 1.5rem;
+  overflow-wrap: anywhere;
 }
+.results-count[hidden] { display: none; }
+.results-count strong { color: var(--accent); font-weight: 800; }
+
+/* ==================================================================== */
+/* Job cards                                                             */
+/*                                                                       */
+/* auto-fill + minmax means the column count follows the *available*     */
+/* width rather than a device guess: 1 column on a phone, 2 on a tablet  */
+/* or laptop, 3 on a wide desktop, all with no breakpoint involved.      */
+/* ==================================================================== */
+.links { width: 100%; }
 
 .links-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--card-min)), 1fr));
+  gap: var(--space-2);
+  align-items: stretch;
 }
 
 .link-item {
+  min-width: 0;
   opacity: 0;
-  transform: translateY(6px);
-  animation: fade-in-up 0.3s ease forwards;
+  animation: fade-in-up 0.28s ease forwards;
 }
 
 .link-button {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: var(--space-3);
   width: 100%;
-  padding: 0.65rem 0.75rem;
+  height: 100%;
+  min-height: var(--tap);
+  padding: var(--space-3);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  font-weight: 600;
-  font-size: 0.88rem;
-  text-align: left;
-  justify-content: flex-start;
-  box-shadow: var(--shadow);
-  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
+  position: relative;
+  isolation: isolate;
+  transition: transform 0.15s ease, background 0.15s ease,
+    box-shadow 0.15s ease, border-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.link-button:hover, .link-button:focus-visible {
-  background: var(--surface-hover);
-  border-color: var(--accent-dim);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-lg);
+.link-button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--accent-dim), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
-.link-button:active {
-  transform: translateY(0) scale(0.995);
-}
+.link-button:active { transform: scale(0.985); }
 
 .link-icon {
-  width: 18px;
-  height: 18px;
+  width: 26px;
+  height: 26px;
   flex-shrink: 0;
-  border-radius: 3px;
+  border-radius: 7px;
   object-fit: cover;
+  background: var(--surface-hover);
+  padding: 3px;
 }
 
-.link-title {
-  overflow-wrap: anywhere;
+.link-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
   flex: 1;
   min-width: 0;
 }
 
+.link-title {
+  font-weight: 650;
+  font-size: var(--fs-base);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+.link-source {
+  font-size: var(--fs-xs);
+  color: var(--text-mute);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.link-arrow {
+  flex-shrink: 0;
+  color: var(--text-mute);
+  opacity: 0.55;
+  transition: transform 0.18s ease, opacity 0.18s ease, color 0.18s ease;
+}
+
+.link-title mark,
+.link-source mark {
+  background: var(--mark-bg);
+  color: var(--mark-text);
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+/* Hover effects only where a real pointer exists — otherwise touch
+   devices latch the hover state on after a tap. */
+@media (hover: hover) and (pointer: fine) {
+  .link-button:hover,
+  .link-button:focus-visible {
+    background: var(--surface-hover);
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+  .link-button:hover::before,
+  .link-button:focus-visible::before { opacity: 1; }
+  .link-button:hover .link-arrow,
+  .link-button:focus-visible .link-arrow {
+    transform: translateX(2px);
+    opacity: 1;
+    color: var(--accent);
+  }
+  .handle:hover { opacity: 0.75; text-decoration: underline; text-underline-offset: 3px; }
+  .search-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 18px var(--accent-glow); }
+  .search-clear:hover { color: var(--text); background: var(--surface-hover); }
+  .ghost-btn:hover, .load-more:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+  .back-to-top:hover { transform: translateY(-2px); box-shadow: 0 8px 24px var(--accent-glow); }
+}
+
+/* ==================================================================== */
+/* Loading skeleton                                                      */
+/* ==================================================================== */
+.skeleton {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--card-min)), 1fr));
+  gap: var(--space-2);
+}
+.skeleton[hidden] { display: none; }
+
+.skeleton-card {
+  height: 58px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: linear-gradient(
+    100deg,
+    var(--surface) 30%,
+    var(--surface-hover) 50%,
+    var(--surface) 70%
+  );
+  background-size: 250% 100%;
+  animation: shimmer 1.3s linear infinite;
+}
+
+/* ==================================================================== */
+/* Empty state / buttons                                                 */
+/* ==================================================================== */
 .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
   text-align: center;
-  color: var(--text-muted);
-  padding: 1.5rem 1rem;
-  font-size: 0.85rem;
+  color: var(--text-mute);
+  padding: var(--space-5) var(--space-3);
+}
+.empty-state[hidden] { display: none; }
+.empty-title { font-weight: 700; color: var(--text-dim); font-size: var(--fs-md); }
+.empty-hint { font-size: var(--fs-sm); }
+
+.ghost-btn,
+.load-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: var(--tap);
+  padding: 0.5rem 1.1rem;
+  margin-top: var(--space-2);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-/* ==================================================================== */
-/* Results Count (when filtering)                                         */
-/* ==================================================================== */
-.results-count {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--accent);
-  margin-bottom: 0.4rem;
-  padding: 0.25rem 0;
+.load-more {
+  width: 100%;
+  margin-top: var(--space-3);
 }
+.load-more[hidden] { display: none; }
+
+.scroll-sentinel { height: 1px; }
 
 /* ==================================================================== */
-/* Inline Ad Banner — AdSense only, no visual chrome                     */
+/* Inline ad banner — spans every grid column so it never splits a row   */
 /* ==================================================================== */
 .ad-banner-item {
+  grid-column: 1 / -1;
   width: 100%;
-  margin: 0;
-  padding: 0;
+  min-width: 0;
   opacity: 0;
-  transform: translateY(6px);
-  animation: fade-in-up 0.3s ease forwards;
+  animation: fade-in 0.3s ease forwards;
 }
 
-.ad-banner {
-  width: 100%;
-  overflow: hidden;
-}
+.ad-banner,
+.ad-banner-content { width: 100%; overflow: hidden; }
 
-.ad-banner-content {
-  width: 100%;
+/* ==================================================================== */
+/* Back to top                                                           */
+/* ==================================================================== */
+.back-to-top {
+  position: fixed;
+  right: calc(var(--space-4) + var(--safe-r));
+  bottom: calc(var(--space-4) + var(--safe-b));
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  width: var(--tap);
+  height: var(--tap);
+  color: var(--accent-ink);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  animation: fade-in 0.2s ease both;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
+.back-to-top[hidden] { display: none; }
+.back-to-top:active { transform: scale(0.92); }
 
 /* ==================================================================== */
 /* Footer                                                                */
 /* ==================================================================== */
 .footer {
   margin-top: auto;
-  padding-top: 1rem;
+  padding-top: var(--space-5);
   text-align: center;
-  font-size: 0.7rem;
-  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  color: var(--text-mute);
   width: 100%;
-  max-width: var(--content-width);
+  max-width: var(--content-max);
 }
-
-.footer-updated {
-  margin-top: 0.15rem;
-  opacity: 0.5;
-}
+.footer-updated { margin: 0; opacity: 0.7; }
 
 /* ==================================================================== */
 /* Animations                                                            */
 /* ==================================================================== */
 @keyframes fade-in-up {
   from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: none; }
 }
-
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+@keyframes shimmer {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
+}
 
+/* ==================================================================== */
+/* Layout modes                                                          */
+/*                                                                       */
+/* Only two real mode switches remain — everything else is fluid.        */
+/* ==================================================================== */
+
+/* Wide enough for 760px of content + two 170px ad rails + gutters. */
+@media (min-width: 1180px) {
+  .sidebar:not([hidden]) { display: block; }
+}
+
+/* Large displays: widen the column so the grid runs three across instead
+   of stranding a narrow strip in the middle of a 27"+ monitor. The card
+   grid picks up the extra columns on its own. */
+@media (min-width: 1600px) {
+  :root {
+    --max-width: 1560px;
+    --content-max: 1040px;
+  }
+}
+
+/* Phone-sized: drop the button label so the field keeps usable width.
+   Tied to container width, not to "is it a phone". */
+@media (max-width: 26.25rem) {
+  .search-btn-text { display: none; }
+  .search-btn { padding-inline: 0.7rem; }
+  :root { --card-min: 240px; }
+}
+
+/* Short viewports — phone in landscape, small split-screen windows.
+   Vertical space is the scarce resource there, so the header gives some
+   back to the list instead of pushing every job below the fold. */
+@media (max-height: 32rem) {
+  .page { padding-block: var(--space-2) var(--space-3); }
+  .avatar-wrap { width: 44px; }
+  .bio, .stat-pill { display: none; }
+  .search-shell { padding-block: var(--space-2); }
+  .footer { padding-top: var(--space-3); }
+}
+
+/* ==================================================================== */
+/* Preference / capability overrides                                     */
+/* ==================================================================== */
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
+  .link-item, .ad-banner-item { opacity: 1; }
 }
 
-/* ==================================================================== */
-/* Responsive — Desktop (>1024px): 3-column with sidebars                */
-/* ==================================================================== */
-@media (min-width: 1025px) {
-  .sidebar:not([hidden]) { display: block; }
-  .search-btn-text { display: inline; }
-}
-
-/* ==================================================================== */
-/* Responsive — Tablet (768–1024px): center content, no sidebars         */
-/* ==================================================================== */
-@media (min-width: 768px) and (max-width: 1024px) {
-  .sidebar { display: none; }
-  .content-center { max-width: 560px; }
-  .search-btn-text { display: inline; }
-}
-
-/* ==================================================================== */
-/* Responsive — Mobile (<768px): single column, compact                  */
-/* ==================================================================== */
-@media (max-width: 767px) {
-  .sidebar { display: none; }
-  .content-center { max-width: 100%; }
-  .search-btn-text { display: none; }
-
-  .search-bar {
-    margin: 0.4rem 0 0.6rem;
-    border-radius: var(--radius);
-  }
-
-  .search-btn {
-    padding: 0.5rem 0.7rem;
-    margin: 0.2rem;
-    border-radius: 10px;
-  }
-
-  .avatar-wrap { width: 56px; height: 56px; }
-  .name { font-size: 1rem; }
-
-  .link-button {
-    padding: 0.6rem 0.65rem;
-    font-size: 0.82rem;
-  }
-}
-
-/* ==================================================================== */
-/* Responsive — Small mobile (<480px): extra compact                     */
-/* ==================================================================== */
-@media (max-width: 480px) {
+@media (prefers-contrast: more) {
   :root {
-    --sidebar-gap: 0;
+    --border: rgba(255, 255, 255, 0.3);
+    --border-strong: rgba(255, 255, 255, 0.55);
+    --text-mute: #9aa0b5;
   }
+}
 
-  .page {
-    padding: 0.75rem 0.6rem 1rem;
-  }
+/* Windows High Contrast mode: let the OS palette drive everything. */
+@media (forced-colors: active) {
+  .link-button,
+  .search-bar,
+  .ghost-btn,
+  .load-more { border: 1px solid CanvasText; }
+  .bg-decor { display: none; }
+  .link-title mark { background: Highlight; color: HighlightText; }
+}
 
-  .avatar-wrap { width: 48px; height: 48px; }
-  .name { font-size: 0.95rem; }
-
-  .search-bar {
-    margin: 0.3rem 0 0.5rem;
-  }
-
-  .search-input {
-    padding: 0.5rem 0.4rem;
-    font-size: 0.85rem;
-  }
-
-  .search-icon {
-    margin-left: 0.6rem;
-  }
-
-  .link-button {
-    padding: 0.5rem 0.6rem;
-    font-size: 0.8rem;
-    border-radius: 10px;
-  }
-
-  .links-list {
-    gap: 0.4rem;
-  }
+@media print {
+  .search-shell, .sidebar, .back-to-top, .bg-decor,
+  .load-more, .ad-banner-item { display: none !important; }
+  body { background: #fff; color: #000; }
+  .links-list { display: block; }
+  .link-button { break-inside: avoid; box-shadow: none; }
 }

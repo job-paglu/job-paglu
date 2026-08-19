@@ -3,11 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0e0e10" media="(prefers-color-scheme: dark)" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="theme-color" content="#08080c" media="(prefers-color-scheme: dark)" />
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
   <meta name="robots" content="index, follow" />
   <link rel="icon" id="favicon" href="assets/favicon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" id="apple-touch-icon" href="assets/favicon.svg" />
+  <link rel="preload" href="data/profile.json" as="fetch" crossorigin="anonymous" />
+  <link rel="preconnect" href="https://www.google.com" />
   <link rel="stylesheet" href="style.css" />
 
   <!-- Google AdSense -->
@@ -37,7 +40,10 @@
 <!-- SEO:END -->
 </head>
 <body>
-  <a class="skip-link" href="#links">Skip to links</a>
+  <a class="skip-link" href="#links">Skip to jobs</a>
+
+  <!-- Ambient background wash. Purely decorative, fixed behind everything. -->
+  <div class="bg-decor" aria-hidden="true"></div>
 
   <div class="page">
     <!-- Profile Header -->
@@ -48,10 +54,11 @@
           class="avatar"
           src="assets/placeholder-avatar.svg"
           alt=""
-          width="72"
-          height="72"
+          width="80"
+          height="80"
           loading="eager"
           decoding="async"
+          fetchpriority="high"
         />
       </div>
       <h1 id="display-name" class="name"></h1>
@@ -61,33 +68,51 @@
         target="_blank"
         rel="noopener noreferrer"
         aria-label="@job_paglu_ on Instagram"
-        >@job_paglu_</a
       >
+        <svg class="handle-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none"/></svg>
+        <span>@job_paglu_</span>
+      </a>
       <p id="bio" class="bio"></p>
+      <p class="stat-pill" id="stat-pill" hidden>
+        <span class="stat-dot" aria-hidden="true"></span>
+        <span id="stat-text"></span>
+      </p>
     </header>
 
-    <!-- Search Bar — compact, single row -->
-    <div class="search-bar" id="search-bar" aria-label="Search jobs">
-      <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input
-        type="text"
-        id="search-input"
-        class="search-input"
-        placeholder="Search jobs, companies, roles..."
-        autocomplete="off"
-        spellcheck="false"
-        aria-label="Search jobs"
-      />
-      <button id="search-btn" class="search-btn" type="button" aria-label="Search">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        <span class="search-btn-text">Search</span>
-      </button>
+    <!-- Sticky search shell — stays reachable however far you scroll -->
+    <div class="search-shell">
+      <div class="search-bar" id="search-bar" role="search">
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input
+          type="search"
+          id="search-input"
+          class="search-input"
+          placeholder="Search jobs, companies, roles…"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          enterkeyhint="search"
+          aria-label="Search jobs"
+          aria-describedby="search-hint"
+        />
+        <button id="search-clear" class="search-clear" type="button" aria-label="Clear search" hidden>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <button id="search-btn" class="search-btn" type="button" aria-label="Search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          <span class="search-btn-text">Search</span>
+        </button>
+      </div>
+      <p id="search-hint" class="visually-hidden">
+        Results filter as you type. Press slash to focus this field, Escape to clear it.
+      </p>
     </div>
 
     <!-- 3-Column Layout: Left Ad | Center Content | Right Ad -->
     <div class="content-layout" id="content-layout">
 
-      <!-- Left Sidebar AdSense (desktop only, search results) -->
+      <!-- Left Sidebar AdSense (wide screens only, search results) -->
       <aside class="sidebar sidebar-left" id="sidebar-left" aria-label="Advertisement" hidden>
         <ins class="adsbygoogle"
           style="display:block"
@@ -100,22 +125,44 @@
       <!-- Center Content Area -->
       <div class="content-center" id="content-center">
 
-        <!-- Results count (shown when filtering) -->
-        <div id="results-count" class="results-count" hidden></div>
+        <!-- Results meta row (count + reset) -->
+        <div id="results-count" class="results-count" role="status" aria-live="polite" hidden></div>
+
+        <!-- Loading skeleton, swapped out once data arrives -->
+        <div id="skeleton" class="skeleton" aria-hidden="true">
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+        </div>
 
         <!-- Links List (filtered in-place by search) -->
-        <main id="links" class="links" aria-label="Links">
+        <main id="links" class="links" aria-label="Jobs" aria-busy="true">
           <ul id="links-list" class="links-list">
             <!-- Populated at runtime from data/profile.json by script.js -->
           </ul>
+
+          <!-- Infinite-scroll trip wire: rendering is batched so the first
+               paint stays fast even with hundreds of listings. -->
+          <div id="scroll-sentinel" class="scroll-sentinel" aria-hidden="true"></div>
+
+          <button id="load-more" class="load-more" type="button" hidden>
+            Show more jobs
+          </button>
+
           <p id="empty-state" class="empty-state" hidden>
-            No jobs found. Try different keywords.
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            <span class="empty-title">No jobs matched</span>
+            <span class="empty-hint">Try a shorter or different keyword.</span>
+            <button id="empty-reset" class="ghost-btn" type="button">Show all jobs</button>
           </p>
         </main>
 
       </div><!-- /content-center -->
 
-      <!-- Right Sidebar AdSense (desktop only, search results) -->
+      <!-- Right Sidebar AdSense (wide screens only, search results) -->
       <aside class="sidebar sidebar-right" id="sidebar-right" aria-label="Advertisement" hidden>
         <ins class="adsbygoogle"
           style="display:block"
@@ -131,6 +178,10 @@
       <p class="footer-updated" id="last-updated"></p>
     </footer>
   </div>
+
+  <button id="back-to-top" class="back-to-top" type="button" aria-label="Back to top" hidden>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="6"/><polyline points="5 13 12 6 19 13"/></svg>
+  </button>
 
   <noscript>
     <p style="text-align:center; padding:2rem; font-family:sans-serif;">

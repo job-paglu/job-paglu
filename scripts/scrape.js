@@ -197,17 +197,41 @@ const SOCIAL_DOMAINS = [
   'spotify.com',
 ];
 
-/** True only if the URL's *hostname* is (or is a subdomain of) one of the
- * known social domains — matching anywhere in the full URL string would
+/** Return the first domain in `domains` that the URL's *hostname* is (or is
+ * a subdomain of). Matching anywhere in the full URL string would
  * false-positive on links that merely mention e.g. "linkedin.com" inside a
  * tracking query parameter (utm_source=linkedin.com etc). */
-function hostnameMatchesSocialDomain(url) {
+function hostnameMatches(url, domains) {
   try {
     const hostname = new URL(url).hostname.replace(/^www\./, '').toLowerCase();
-    return SOCIAL_DOMAINS.find((d) => hostname === d || hostname.endsWith(`.${d}`));
+    return domains.find((d) => hostname === d || hostname.endsWith(`.${d}`));
   } catch {
     return undefined;
   }
+}
+
+function hostnameMatchesSocialDomain(url) {
+  return hostnameMatches(url, SOCIAL_DOMAINS);
+}
+
+// Destinations that should never be rendered as link cards. This page is a
+// job board; Linktree additionally surfaces the profile's own YouTube
+// channel as a dedicated tile, which isn't a job posting and takes the top
+// slot on the site. Excluded links are still fed to extractSocials(), so
+// the channel remains recorded under `socials` in data/profile.json.
+const EXCLUDED_DOMAINS = ['youtube.com', 'youtu.be'];
+
+// Linktree tags its embed tiles by type ("YOUTUBE", "YOUTUBE_VIDEO", ...);
+// catch those even if the underlying URL is a redirector we don't
+// recognise by hostname.
+const EXCLUDED_TYPE_PATTERN = /^youtube/i;
+
+/** Hostname-scoped so a genuine job posting whose URL merely contains the
+ * word "youtube" — e.g. a Google careers listing for a YouTube team — is
+ * kept. */
+function isExcludedLink(link) {
+  if (EXCLUDED_TYPE_PATTERN.test(link.type || '')) return true;
+  return Boolean(hostnameMatches(link.url, EXCLUDED_DOMAINS));
 }
 
 function extractSocials(links, root) {
@@ -305,7 +329,11 @@ function parseLinktreeHtml(html, sourceUrl) {
       'coverImageUrl',
     ]);
     links = normaliseLinks(findLinkArrays(nextData));
+    // Socials are derived from the *unfiltered* set so excluded
+    // destinations are still discoverable in the output data, then the
+    // excluded ones are dropped from the link cards themselves.
     socials = extractSocials(links, nextData);
+    links = links.filter((link) => !isExcludedLink(link));
   }
 
   // Fall back to <meta> tags for anything the JSON walk didn't find. This
