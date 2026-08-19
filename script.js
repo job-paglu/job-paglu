@@ -9,8 +9,82 @@
 // hundreds of favicon requests before the page became interactive.
 
 const DATA_URL = 'data/profile.json';
+
+/* ─── AdSense configuration ────────────────────────────────────────
+ *
+ * Slot IDs come from AdSense → Ads → By ad unit. Create the unit, then
+ * paste the numeric `data-ad-slot` from its snippet here.
+ *
+ *  inFeed   — create as an "In-feed ad". Also copy its data-ad-layout-key
+ *             into AD_INFEED_LAYOUT_KEY below; in-feed units need both.
+ *  sidebar  — create as a responsive "Display ad" (vertical suits the rail).
+ *
+ * Leave a value empty to disable that placement entirely. An <ins> with no
+ * slot ID can never be filled, so rendering one just puts dead markup on
+ * the page — the code skips the placement instead.
+ */
 const ADSENSE_CLIENT = 'ca-pub-3043505043619574';
-const LINKS_PER_AD = 6;      // inline ad cadence within search results
+const AD_SLOTS = {
+  inFeed: '',
+  sidebar: '',
+};
+const AD_INFEED_LAYOUT_KEY = '';
+
+/* ══════════════════════════════════════════════════════════════════════
+ * ADSTERRA:START — third-party ad network (Adsterra).
+ *
+ * ⚠  HOW TO REMOVE — see ADS.md for the full checklist. Short version:
+ *    set `enabled: false` below and every Adsterra unit stops loading. To
+ *    rip it out for good, delete each marked block in this file and in
+ *    style.css. Nothing outside those blocks references Adsterra.
+ *
+ * ⚠  POLICY RISK: `social` below is a Social Bar / popunder-style unit.
+ *    Google AdSense forbids running its ads on pages with pop-unders.
+ *    Keeping both networks live risks the AdSense account. Setting
+ *    `social.src` to '' disables just that unit and keeps the rest.
+ * ════════════════════════════════════════════════════════════════════ */
+const ADSTERRA = {
+  enabled: true,
+
+  // 468x60 iframe banner. Repeated in the feed; each copy is rendered in
+  // its own srcdoc iframe because invoke.js reads a single global
+  // `atOptions`, so two on one page would overwrite each other.
+  banner: {
+    key: 'bfeae19c05d8dd0aaaa4cff4593bef81',
+    width: 468,
+    height: 60,
+  },
+
+  // Native banner. Single instance only — it binds to one container id.
+  native: {
+    id: 'ca963b927ae7e74c2b98cf0bbd70cfa3',
+    src: 'https://pl30920895.effectivecpmnetwork.com/ca963b927ae7e74c2b98cf0bbd70cfa3/invoke.js',
+  },
+
+  // Social Bar / popunder — DISABLED ON PURPOSE, do not set `src` back
+  // without reading ADS.md first.
+  //
+  // Google AdSense forbids serving its ads on pages that also run
+  // pop-unders. Leaving this on put the AdSense account
+  // (ca-pub-3043505043619574) at risk of termination, which earns far
+  // more than this unit ever would. The URL is kept here rather than
+  // deleted so it can be restored deliberately: move `disabledSrc` back
+  // into `src` — and if you do, drop the AdSense script tag from
+  // index.html in the same change.
+  social: {
+    src: '',
+    disabledSrc:
+      'https://pl30920896.effectivecpmnetwork.com/fc/ab/20/fcab20b85cd46c9e3f89a3a6cd0626da.js',
+  },
+};
+/* ADSTERRA:END */
+
+// Ads previously appeared only in search results, which meant most
+// visitors — who never search — saw none at all. Flip to false to go back
+// to search-results-only.
+const ADS_IN_MAIN_FEED = true;
+
+const LINKS_PER_AD = 6;      // inline ad cadence within the list
 const BATCH_SIZE = 24;       // cards appended per render pass
 const SEARCH_DEBOUNCE_MS = 120;
 const BACK_TO_TOP_AT = 700;  // px scrolled before the button appears
@@ -82,14 +156,24 @@ function pushAd() {
   }
 }
 
+/** Stamps the configured slot onto the two static rail units, then fills
+ * them. Without a slot ID the rails stay empty and hidden. */
 function pushSidebarAds() {
-  if (sidebarAdsPushed) return;
-  pushAd(); // left
-  pushAd(); // right
+  if (sidebarAdsPushed || !AD_SLOTS.sidebar) return;
+  for (const rail of [els.sidebarLeft, els.sidebarRight]) {
+    const ins = rail?.querySelector('ins.adsbygoogle');
+    if (!ins) continue;
+    ins.setAttribute('data-ad-slot', AD_SLOTS.sidebar);
+    pushAd();
+  }
   sidebarAdsPushed = true;
 }
 
-function createAdBannerLi() {
+/** Returns null when no in-feed slot is configured, so the caller skips the
+ * placement rather than inserting an <ins> that can never be filled. */
+function createAdSenseInFeedLi() {
+  if (!AD_SLOTS.inFeed) return null;
+
   const li = document.createElement('li');
   li.className = 'ad-banner-item';
 
@@ -104,14 +188,153 @@ function createAdBannerLi() {
   ins.style.display = 'block';
   ins.style.width = '100%';
   ins.setAttribute('data-ad-client', ADSENSE_CLIENT);
-  ins.setAttribute('data-ad-slot', '');
-  ins.setAttribute('data-ad-format', 'auto');
-  ins.setAttribute('data-full-width-responsive', 'true');
+  ins.setAttribute('data-ad-slot', AD_SLOTS.inFeed);
+
+  if (AD_INFEED_LAYOUT_KEY) {
+    // In-feed unit: renders card-shaped to sit inside the list. It sizes
+    // itself from the layout key, so no full-width-responsive flag.
+    ins.setAttribute('data-ad-format', 'fluid');
+    ins.setAttribute('data-ad-layout-key', AD_INFEED_LAYOUT_KEY);
+  } else {
+    // Plain responsive display unit.
+    ins.setAttribute('data-ad-format', 'auto');
+    ins.setAttribute('data-full-width-responsive', 'true');
+  }
 
   content.appendChild(ins);
   banner.appendChild(content);
   li.appendChild(banner);
   return li;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+ * ADSTERRA:START — rendering. Delete this whole block to remove Adsterra.
+ * ════════════════════════════════════════════════════════════════════ */
+
+// Live banner wrappers, so a viewport change can rescale them all.
+let adsterraWraps = [];
+let adsterraSocialMounted = false;
+let adsterraNativeMounted = false;
+
+/** Each banner runs in its own srcdoc document. invoke.js reads one global
+ * `atOptions`, so two banners sharing a document would clobber each
+ * other's config — an iframe gives every copy its own global scope. */
+function adsterraBannerSrcdoc() {
+  const { key, width, height } = ADSTERRA.banner;
+  const opts = JSON.stringify({ key, format: 'iframe', height, width, params: {} });
+  return (
+    '<!doctype html><html><head><meta charset="utf-8">' +
+    '<style>html,body{margin:0;padding:0;overflow:hidden;background:transparent}</style>' +
+    '</head><body>' +
+    `<script>window.atOptions=${opts};<\/script>` +
+    `<script src="https://www.highperformanceformat.com/${key}/invoke.js"><\/script>` +
+    '</body></html>'
+  );
+}
+
+/** The unit is a fixed 468x60, which is wider than a phone. Rather than
+ * clipping it (useless to the advertiser and to us) it is scaled down to
+ * whatever width is actually available. */
+function fitAdsterraBanner(wrap) {
+  const { width, height } = ADSTERRA.banner;
+  const avail = wrap.clientWidth || wrap.parentElement?.clientWidth || width;
+  const scale = Math.min(1, avail / width);
+  const frame = wrap.querySelector('iframe');
+  if (frame) frame.style.transform = `scale(${scale})`;
+  wrap.style.height = `${Math.round(height * scale)}px`;
+}
+
+function refitAdsterraBanners() {
+  adsterraWraps = adsterraWraps.filter((w) => w.isConnected);
+  adsterraWraps.forEach(fitAdsterraBanner);
+}
+
+function createAdsterraBannerLi() {
+  if (!ADSTERRA.enabled || !ADSTERRA.banner.key) return null;
+
+  const li = document.createElement('li');
+  li.className = 'ad-banner-item';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'adsterra-banner';
+  // Reserve the unscaled height so the row does not jump when it fits.
+  wrap.style.height = `${ADSTERRA.banner.height}px`;
+
+  const frame = document.createElement('iframe');
+  frame.className = 'adsterra-banner-frame';
+  frame.width = ADSTERRA.banner.width;
+  frame.height = ADSTERRA.banner.height;
+  frame.title = 'Advertisement';
+  frame.loading = 'lazy';
+  frame.scrolling = 'no';
+  frame.setAttribute('frameborder', '0');
+  frame.srcdoc = adsterraBannerSrcdoc();
+
+  wrap.appendChild(frame);
+  li.appendChild(wrap);
+  adsterraWraps.push(wrap);
+  return li;
+}
+
+/** Native banner — one per page; it binds to a single container id. */
+function mountAdsterraNative() {
+  if (!ADSTERRA.enabled || !ADSTERRA.native.id || adsterraNativeMounted) return;
+  if (!els.links) return;
+  adsterraNativeMounted = true;
+
+  const host = document.createElement('div');
+  host.id = 'adsterra-native';
+  host.setAttribute('aria-label', 'Advertisement');
+
+  // The container must exist before invoke.js runs or it has nothing to
+  // fill, so it is appended first and the script after.
+  const container = document.createElement('div');
+  container.id = `container-${ADSTERRA.native.id}`;
+  host.appendChild(container);
+
+  const script = document.createElement('script');
+  script.async = true;
+  script.setAttribute('data-cfasync', 'false');
+  script.src = ADSTERRA.native.src;
+  host.appendChild(script);
+
+  els.links.insertAdjacentElement('afterend', host);
+}
+
+/** Social Bar / popunder — see the policy warning on ADSTERRA above. */
+function mountAdsterraSocial() {
+  if (!ADSTERRA.enabled || !ADSTERRA.social.src || adsterraSocialMounted) return;
+  adsterraSocialMounted = true;
+  const script = document.createElement('script');
+  script.async = true;
+  script.src = ADSTERRA.social.src;
+  document.body.appendChild(script);
+}
+/* ADSTERRA:END */
+
+/** One in-feed placement, as `{ li, onInserted }`. AdSense wins when a slot
+ * is configured, otherwise the next network in line fills the position;
+ * null means neither is set and the caller leaves the row out entirely.
+ *
+ * `onInserted` runs once the node is in the document — every network needs
+ * something to happen at that point (AdSense measures the slot, a scaled
+ * banner needs a real clientWidth), and returning it as a callback keeps
+ * the render loop from knowing which network it is dealing with. */
+function createInFeedAdLi() {
+  const adsense = createAdSenseInFeedLi();
+  if (adsense) return { li: adsense, onInserted: pushAd };
+
+  /* ADSTERRA:START */
+  const banner = createAdsterraBannerLi();
+  if (banner) {
+    return {
+      li: banner,
+      onInserted: () => fitAdsterraBanner(banner.querySelector('.adsterra-banner')),
+    };
+  }
+  /* ADSTERRA:END */
+
+  return null;
 }
 
 // ─── Search-term highlighting ─────────────────────────────────────
@@ -233,18 +456,20 @@ function renderNextBatch() {
 
     const isLastOverall = index === currentResults.length - 1;
     if (adsInResults && (index + 1) % LINKS_PER_AD === 0 && !isLastOverall) {
-      const adLi = createAdBannerLi();
-      frag.appendChild(adLi);
-      pendingAds.push(adLi);
+      const ad = createInFeedAdLi();
+      if (ad) {
+        frag.appendChild(ad.li);
+        pendingAds.push(ad.onInserted);
+      }
     }
   });
 
   list.appendChild(frag);
   renderedCount += slice.length;
 
-  // adsbygoogle.push() must run once per <ins>, and only after it is in
-  // the document — otherwise AdSense measures a detached, zero-width slot.
-  pendingAds.forEach(pushAd);
+  // Deferred until the nodes are actually in the document: a detached slot
+  // measures as zero-width, which every ad network handles badly.
+  pendingAds.forEach((run) => run());
 
   updateLoadMore();
   rearmSentinel();
@@ -322,7 +547,7 @@ function executeSearch(query) {
   setHidden(els.searchClear, !(query && query.length));
 
   if (terms.length === 0) {
-    resetList(allLinks, { withAds: false });
+    resetList(allLinks, { withAds: ADS_IN_MAIN_FEED });
     setHidden(els.emptyState, true);
     setHidden(els.sidebarLeft, true);
     setHidden(els.sidebarRight, true);
@@ -343,9 +568,13 @@ function executeSearch(query) {
   } else {
     setHidden(els.emptyState, true);
     resetList(results, { withAds: true });
-    setHidden(els.sidebarLeft, false);
-    setHidden(els.sidebarRight, false);
-    pushSidebarAds();
+    // Rails only appear once a slot is configured — an empty 170px column
+    // either side would otherwise just squeeze the list for nothing.
+    if (AD_SLOTS.sidebar) {
+      setHidden(els.sidebarLeft, false);
+      setHidden(els.sidebarRight, false);
+      pushSidebarAds();
+    }
   }
 
   renderCountMessage({ count: results.length, query });
@@ -541,6 +770,24 @@ async function init() {
 
     initScrollObserver();
     renderLastUpdated(data.generatedAt);
+
+    /* ADSTERRA:START */
+    mountAdsterraNative();
+    mountAdsterraSocial();
+    let refitPending = false;
+    window.addEventListener(
+      'resize',
+      () => {
+        if (refitPending) return;
+        refitPending = true;
+        requestAnimationFrame(() => {
+          refitPending = false;
+          refitAdsterraBanners();
+        });
+      },
+      { passive: true }
+    );
+    /* ADSTERRA:END */
 
     window.addEventListener('hashchange', applyHashQuery);
   } catch (err) {
