@@ -293,6 +293,53 @@ button { font: inherit; }
 }
 
 /* ==================================================================== */
+/* International jobs cross-link                                         */
+/*                                                                       */
+/* Deliberately a tinted/outlined pill rather than a filled gradient, so */
+/* it reads as a secondary route and does not compete with the filled    */
+/* Search button a few pixels below it.                                  */
+/* ==================================================================== */
+.intl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  max-width: 100%;
+  min-height: var(--tap);
+  margin-top: var(--space-3);
+  padding: 0.5rem clamp(0.85rem, 0.6rem + 1vw, 1.15rem);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1.5px solid var(--accent-glow);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s ease, background 0.15s ease,
+    border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.intl-btn-icon,
+.intl-btn-arrow { flex-shrink: 0; }
+
+.intl-btn-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.intl-btn-arrow {
+  opacity: 0.7;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+.intl-btn:active { transform: scale(0.97); }
+
+/* ==================================================================== */
 /* Search — sticky so it stays reachable through a long list             */
 /* ==================================================================== */
 .search-shell {
@@ -565,6 +612,14 @@ button { font: inherit; }
     color: var(--accent);
   }
   .handle:hover { opacity: 0.75; text-decoration: underline; text-underline-offset: 3px; }
+  .intl-btn:hover, .intl-btn:focus-visible {
+    background: var(--accent-glow);
+    border-color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px var(--accent-dim);
+  }
+  .intl-btn:hover .intl-btn-arrow,
+  .intl-btn:focus-visible .intl-btn-arrow { transform: translateX(2px); opacity: 1; }
   .search-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 18px var(--accent-glow); }
   .search-clear:hover { color: var(--text); background: var(--surface-hover); }
   .ghost-btn:hover, .load-more:hover { background: var(--surface-hover); border-color: var(--border-strong); }
@@ -768,6 +823,8 @@ button { font: inherit; }
   .page { padding-block: var(--space-2) var(--space-3); }
   .avatar-wrap { width: 44px; }
   .bio, .stat-pill { display: none; }
+  /* The cross-link stays — it is a primary route, not decoration. */
+  .intl-btn { margin-top: var(--space-2); min-height: 38px; }
   .search-shell { padding-block: var(--space-2); }
   .footer { padding-top: var(--space-3); }
 }
