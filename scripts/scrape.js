@@ -771,5 +771,11 @@ async function main() {
 main().catch((err) => {
   console.error('[scrape] FAILED:', err.message);
   console.error('[scrape] Previous data/profile.json (if any) was left unchanged.');
+  // Emit a GitHub Actions error annotation with the failure message.
+  // Annotations are visible on the Actions run page without needing
+  // to download the log file (which requires sign-in). The annotation
+  // is limited to ~4KB; truncate multi-line errors to the first line.
+  const firstLine = (err.message || 'unknown error').split('\n')[0].slice(0, 1000);
+  console.error(`::error::Scraper failed: ${firstLine}`);
   process.exitCode = 1;
 });
