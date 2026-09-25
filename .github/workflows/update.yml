@@ -36,7 +36,12 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: npm install
+        # --no-package-lock prevents npm from creating an untracked
+        # package-lock.json in CI, which would otherwise pollute
+        # `git status --porcelain` and trick the diff check below into
+        # thinking the working tree changed when the scraper produced
+        # nothing new.
+        run: npm install --no-package-lock --no-audit --no-fund
 
       - name: Run scraper
         # Never let a scrape failure fail the whole workflow: the script
@@ -50,8 +55,13 @@ jobs:
 
       - name: Check for changes
         id: diff
+        # Only look at the files we actually commit. Using a path-scoped
+        # `git status` means stray untracked files (e.g. a stray
+        # package-lock.json, a debug log, a node_modules entry that escaped
+        # .gitignore) can no longer flip `changed=true` and then trip
+        # `git commit` into "nothing to commit" → exit 1.
         run: |
-          if [ -n "$(git status --porcelain)" ]; then
+          if [ -n "$(git status --porcelain -- data/profile.json index.html robots.txt sitemap.xml)" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -63,8 +73,28 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/profile.json index.html robots.txt sitemap.xml
+          # Belt-and-suspenders: if `git add` staged nothing after all
+          # (race between the diff check and commit, fsync delay, etc.),
+          # skip the commit instead of failing the whole workflow with
+          # "nothing to commit, working tree clean".
+          if git diff --cached --quiet; then
+            echo "No staged changes after `git add`; skipping commit."
+            exit 0
+          fi
           git commit -m "chore: auto-update Linktree data [skip ci]"
-          git push
+          # If a concurrent run (e.g. scheduled + push trigger) pushed
+          # between our checkout and our push, rebase our single auto
+          # commit on top of origin/main and retry instead of failing.
+          for attempt in 1 2 3; do
+            if git push; then
+              exit 0
+            fi
+            echo "git push failed (attempt $attempt), rebasing on origin/main..."
+            git fetch origin main
+            git rebase origin/main
+          done
+          echo "::error::Could not push after 3 attempts"
+          exit 1
 
   deploy:
     name: Deploy to GitHub Pages

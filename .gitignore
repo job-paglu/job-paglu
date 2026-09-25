@@ -2,3 +2,9 @@ node_modules/
 .DS_Store
 *.log
 *.tmp-*
+
+# npm install in CI generates this lock file, but we don't track it
+# (no runtime dependencies). Leaving it untracked would make
+# `git status --porcelain` always return non-empty in the update
+# workflow, which then trips `git commit` with "nothing to commit".
+package-lock.json
