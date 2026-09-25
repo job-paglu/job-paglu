@@ -49,9 +49,29 @@ jobs:
         # keep serving the last known-good build. GITHUB_TOKEN authenticates
         # the GitHub user API call so it isn't hit by the 60/hour cap that
         # unauthenticated requests share across all Actions runners.
+        #
+        # On failure, capture the last 80 lines of output to the GitHub
+        # Actions step summary (visible on the run page without
+        # downloading logs) so we can diagnose what tripped the scraper
+        # — Linktree WAF 406, r.jina.ai 401, timeout, etc. The `|| true`
+        # ensures the step still exits 0 so the deploy job can run.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run scrape || echo "::warning::Scrape failed, keeping previous data/profile.json"
+        run: |
+          set +e
+          npm run scrape > /tmp/scrape.log 2>&1
+          rc=$?
+          if [ $rc -ne 0 ]; then
+            echo "::warning::Scrape failed (exit $rc), keeping previous data/profile.json"
+            {
+              echo "## Scraper failure log (last 80 lines)"
+              echo
+              echo '```'
+              tail -n 80 /tmp/scrape.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit 0
 
       - name: Check for changes
         id: diff
