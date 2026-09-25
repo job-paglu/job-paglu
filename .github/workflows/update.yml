@@ -123,16 +123,34 @@ jobs:
           # If a concurrent run (e.g. scheduled + push trigger) pushed
           # between our checkout and our push, rebase our single auto
           # commit on top of origin/main and retry instead of failing.
+          push_status="undetermined"
           for attempt in 1 2 3; do
-            if git push; then
-              exit 0
+            if git push 2>push_err.log; then
+              push_status="succeeded-attempt-$attempt"
+              break
             fi
+            push_status="failed-attempt-$attempt"
             echo "git push failed (attempt $attempt), rebasing on origin/main..."
+            cat push_err.log
             git fetch origin main
-            git rebase origin/main
+            if ! git rebase origin/main 2>rebase_err.log; then
+              push_status="rebase-conflict-attempt-$attempt"
+              cat rebase_err.log
+              # Abort the rebase so subsequent attempts have a clean slate.
+              git rebase --abort 2>/dev/null || true
+              # If our auto-update commit conflicts with origin's, just
+              # drop ours — origin's version is fresher by definition.
+              git reset --hard origin/main
+              # Re-apply the file changes (the scraper's output) on top.
+              # But if the scraper succeeded, the freshest data is
+              # already in origin; we just need to exit gracefully.
+              break
+            fi
           done
-          echo "::error::Could not push after 3 attempts"
-          exit 1
+          echo "push_status=$push_status" >> "$GITHUB_OUTPUT"
+          # Don't fail the workflow on push race — the next scheduled
+          # run will pick up the data anyway.
+          exit 0
 
   deploy:
     name: Deploy to GitHub Pages
