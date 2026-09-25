@@ -50,17 +50,19 @@ jobs:
         # the GitHub user API call so it isn't hit by the 60/hour cap that
         # unauthenticated requests share across all Actions runners.
         #
-        # On failure, capture the last 80 lines of scraper output to
-        # /tmp/scrape.log, then ALSO commit that log to a debug file
-        # (data/last-scrape-error.log) so it can be read from the repo
-        # without needing Actions log access. The debug file is removed
-        # again as soon as the scraper succeeds.
+        # IMPORTANT: we redirect stdout to /tmp/scrape.log but let stderr
+        # flow directly to the workflow's own stderr so that ::error:: /
+        # ::warning:: annotations emitted by scrape.js are picked up by
+        # the Actions runner and shown on the run page (without sign-in).
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set +e
-          npm run scrape > /tmp/scrape.log 2>&1
-          rc=$?
+          # Capture stdout to a file for the step-summary tail.
+          # Stderr flows freely to the workflow log so ::error:: annotations
+          # are recognized by the Actions runner.
+          npm run scrape 2>&1 | tee /tmp/scrape.log
+          rc=${PIPESTATUS[0]}
           if [ $rc -ne 0 ]; then
             echo "::warning::Scrape failed (exit $rc), keeping previous data/profile.json"
             {
