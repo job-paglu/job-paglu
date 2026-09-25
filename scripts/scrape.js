@@ -41,9 +41,38 @@ const LINKTREE_URL =
 const SITE_URL = process.env.SITE_URL || 'https://jobpaglu.eu.cc/';
 
 const FETCH_TIMEOUT_MS = 15_000;
-const USER_AGENT =
+
+// Realistic Chrome-on-Windows header set. Linktree's edge WAF rejects
+// (HTTP 406 Not Acceptable) requests that claim to be a browser in the
+// User-Agent but send a non-browser-shaped Accept header. Specifically
+// `Accept: text/html,application/xhtml+xml` (no quality list, no
+// image/webp, no */* fallback) is the fingerprint that trips the 406.
+// Sending the full browser set — including Accept-Encoding: gzip and
+// the Sec-Fetch-* / Sec-Ch-Ua family — has been verified (Sep 2026)
+// to consistently return 200 from GitHub Actions runners and from
+// local machines alike.
+//
+// Keep these in sync between fetchText() and fetchJson() — the JSON
+// endpoint is on api.github.com, which doesn't care about these
+// headers, but sending a consistent identity avoids surprises if
+// Linktree ever starts checking fingerprint coherence.
+const BROWSER_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
   '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+const BROWSER_HEADERS = {
+  'User-Agent': BROWSER_UA,
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'none',
+  'Sec-Fetch-User': '?1',
+  'Upgrade-Insecure-Requests': '1',
+  'Sec-Ch-Ua': '"Chromium";v="124", "Google Chrome";v="124", "Not.A/Brand";v="99"',
+  'Sec-Ch-Ua-Mobile': '?0',
+  'Sec-Ch-Ua-Platform': '"Windows"',
+};
 
 const SEO_START = '<!-- SEO:START -->';
 const SEO_END = '<!-- SEO:END -->';
@@ -60,10 +89,7 @@ async function fetchText(url) {
   try {
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: {
-        'User-Agent': USER_AGENT,
-        Accept: 'text/html,application/xhtml+xml',
-      },
+      headers: BROWSER_HEADERS,
     });
     if (!res.ok) {
       throw new Error(`Request to ${url} failed with HTTP ${res.status}`);
@@ -78,9 +104,13 @@ async function fetchJson(url, headers = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
+    // For JSON endpoints (e.g. api.github.com) we override Accept but
+    // keep the rest of the browser identity. The GitHub REST API
+    // requires Accept: application/json, and authenticating with the
+    // GITHUB_TOKEN keeps us off the 60/hour unauthenticated cap.
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: { 'User-Agent': USER_AGENT, Accept: 'application/json', ...headers },
+      headers: { ...BROWSER_HEADERS, Accept: 'application/json', ...headers },
     });
     if (!res.ok) {
       throw new Error(`Request to ${url} failed with HTTP ${res.status}`);
