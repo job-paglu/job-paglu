@@ -49,68 +49,197 @@ const FETCH_TIMEOUT_MS = 15_000;
 // image/webp, no */* fallback) is the fingerprint that trips the 406.
 // Sending the full browser set — including Accept-Encoding: gzip and
 // the Sec-Fetch-* / Sec-Ch-Ua family — has been verified (Sep 2026)
-// to consistently return 200 from GitHub Actions runners and from
-// local machines alike.
+// to consistently return 200 from local machines.
 //
-// Keep these in sync between fetchText() and fetchJson() — the JSON
-// endpoint is on api.github.com, which doesn't care about these
-// headers, but sending a consistent identity avoids surprises if
-// Linktree ever starts checking fingerprint coherence.
-const BROWSER_UA =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-  '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-const BROWSER_HEADERS = {
-  'User-Agent': BROWSER_UA,
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-  'Accept-Language': 'en-US,en;q=0.9',
-  'Accept-Encoding': 'gzip, deflate, br',
-  'Sec-Fetch-Dest': 'document',
-  'Sec-Fetch-Mode': 'navigate',
-  'Sec-Fetch-Site': 'none',
-  'Sec-Fetch-User': '?1',
-  'Upgrade-Insecure-Requests': '1',
-  'Sec-Ch-Ua': '"Chromium";v="124", "Google Chrome";v="124", "Not.A/Brand";v="99"',
-  'Sec-Ch-Ua-Mobile': '?0',
-  'Sec-Ch-Ua-Platform': '"Windows"',
-};
+// IMPORTANT (Sep 2026): GitHub Actions egress IPs are flagged by
+// Linktree's WAF regardless of the headers sent. The scraper therefore
+// retries with backoff and rotates through several UA strings, then
+// falls back to r.jina.ai as a last-resort reader-proxy. See
+// `fetchWithRetry()` and `fetchText()` below.
+const BROWSER_UAS = [
+  // Chrome 124 on Windows (primary)
+  {
+    ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+        '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    platform: '"Windows"',
+    chUa: '"Chromium";v="124", "Google Chrome";v="124", "Not.A/Brand";v="99"',
+  },
+  // Safari 17 on macOS (different browser, different fingerprint)
+  {
+    ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 ' +
+        '(KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+    platform: '"macOS"',
+    // Safari doesn't send Sec-Ch-Ua family — omit them entirely
+    noChUa: true,
+  },
+  // Chrome 124 on Linux (what GH Actions runners actually run)
+  {
+    ua: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 ' +
+        '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    platform: '"Linux"',
+    chUa: '"Chromium";v="124", "Google Chrome";v="124", "Not.A/Brand";v="99"',
+  },
+  // Mobile Safari (drastically different fingerprint, often bypasses WAF rules
+  // that target desktop Chrome fingerprints)
+  {
+    ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) ' +
+        'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+    platform: '"iOS"',
+    noChUa: true,
+  },
+];
 
-const SEO_START = '<!-- SEO:START -->';
-const SEO_END = '<!-- SEO:END -->';
+/** Build a full browser-headers object for the given UA profile. */
+function buildBrowserHeaders(uaProfile) {
+  const h = {
+    'User-Agent': uaProfile.ua,
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'none',
+    'Sec-Fetch-User': '?1',
+    'Upgrade-Insecure-Requests': '1',
+  };
+  if (!uaProfile.noChUa) {
+    h['Sec-Ch-Ua'] = uaProfile.chUa;
+    h['Sec-Ch-Ua-Mobile'] = '?0';
+    h['Sec-Ch-Ua-Platform'] = uaProfile.platform;
+  }
+  return h;
+}
 
-/* --------------------------------------------------------------------- */
-/* Generic helpers                                                        */
-/* --------------------------------------------------------------------- */
+// Pre-built header sets for each UA in BROWSER_UAS, used in rotation.
+const BROWSER_HEADERS_SET = BROWSER_UAS.map(buildBrowserHeaders);
 
-/** Fetch text with a timeout and a realistic User-Agent so the request is
- * treated like an ordinary public page view (no auth, no cookies sent). */
-async function fetchText(url) {
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Single fetch attempt with timeout + headers. Returns Response or throws. */
+async function singleFetch(url, headers, timeoutMs = FETCH_TIMEOUT_MS) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: BROWSER_HEADERS,
+      headers,
+      redirect: 'follow',
     });
-    if (!res.ok) {
-      throw new Error(`Request to ${url} failed with HTTP ${res.status}`);
-    }
-    return await res.text();
+    return res;
   } finally {
     clearTimeout(timer);
   }
 }
 
+/** Fetch with retry + UA rotation + r.jina.ai fallback.
+ *
+ * Strategy:
+ *  1. Try each of the 4 UA profiles in turn, with a short backoff between.
+ *  2. If all direct attempts fail (406/403/5xx/timeout), retry the rotation
+ *     once more after a longer backoff — Linktree's WAF uses sliding-window
+ *     rate limits, so simply waiting often unblocks the IP.
+ *  3. As a last resort, fetch via r.jina.ai (a free public reader-proxy
+ *     that returns the page text with bots/JS stripped). The data we need
+ *     (__NEXT_DATA__ JSON) is in the HTML source, so we read raw bytes
+ *     rather than the reader-formatted Markdown endpoint.
+ *
+ * The fallback is only triggered if direct fetch fails, so residential
+ * IPs (local development, the very first CI runs) won't pay any extra
+ * latency.
+ */
+async function fetchText(url) {
+  const directErrors = [];
+
+  // Two passes over the UA rotation, with a longer backoff between passes.
+  for (let pass = 0; pass < 2; pass++) {
+    if (pass > 0) {
+      console.log(`[scrape] Direct fetch pass 1 exhausted, waiting 8s before retry...`);
+      await sleep(8_000);
+    }
+    for (let i = 0; i < BROWSER_HEADERS_SET.length; i++) {
+      const headers = BROWSER_HEADERS_SET[i];
+      const uaShort = headers['User-Agent'].slice(0, 60);
+      try {
+        const res = await singleFetch(url, headers);
+        if (res.ok) {
+          if (pass > 0 || i > 0) {
+            console.log(`[scrape] Direct fetch succeeded on pass ${pass + 1} UA #${i + 1}.`);
+          }
+          return await res.text();
+        }
+        // 406 / 403 / 5xx → try next UA. 4xx other than 406/403 likely means
+        // the page is genuinely gone, but we still try alternates before
+        // giving up.
+        const msg = `HTTP ${res.status}`;
+        directErrors.push(`pass${pass + 1}-ua${i + 1}: ${msg}`);
+        console.log(`[scrape] Direct fetch UA #${i + 1} (${uaShort}...) returned ${msg}.`);
+      } catch (err) {
+        directErrors.push(`pass${pass + 1}-ua${i + 1}: ${err.name || 'Error'} ${err.message}`);
+        console.log(`[scrape] Direct fetch UA #${i + 1} (${uaShort}...) threw: ${err.message}`);
+      }
+      // Small backoff between UAs in same pass
+      await sleep(1_500);
+    }
+  }
+
+  // All direct attempts failed — fall back to r.jina.ai reader-proxy.
+  // r.jina.ai fetches the URL server-side from its own (residential) IPs
+  // and returns the page content. We use the raw endpoint by NOT
+  // requesting the markdown conversion (no Accept: text/markdown).
+  console.log(`[scrape] All direct fetches failed (${directErrors.length} attempts).`);
+  console.log(`[scrape] Falling back to r.jina.ai reader-proxy...`);
+  const jinaUrl = `https://r.jina.ai/${url}`;
+  try {
+    const res = await singleFetch(
+      jinaUrl,
+      {
+        // r.jina.ai asks for an API key for anonymous queries from
+        // low-reputation IPs, but a normal User-Agent helps.
+        'User-Agent': 'Mozilla/5.0 (compatible; linktree-scraper/1.0)',
+        'Accept': 'text/html,application/xhtml+xml,*/*;q=0.8',
+      },
+      30_000, // r.jina.ai can be slow
+    );
+    if (res.ok) {
+      const text = await res.text();
+      if (text && text.length > 1000) {
+        console.log(`[scrape] r.jina.ai returned ${text.length} chars.`);
+        // r.jina.ai can return either raw HTML (when no Accept: text/markdown
+        // is sent) or a "Reader" Markdown variant. The __NEXT_DATA__ JSON
+        // block is only in raw HTML; if r.jina.ai stripped it, we'll fail
+        // later in parseLinktreeHtml() and the workflow's "nothing staged"
+        // guard will keep previous data.
+        return text;
+      }
+      directErrors.push(`jina: too short (${text.length} chars)`);
+    } else {
+      directErrors.push(`jina: HTTP ${res.status}`);
+      console.log(`[scrape] r.jina.ai returned HTTP ${res.status}.`);
+    }
+  } catch (err) {
+    directErrors.push(`jina: ${err.message}`);
+    console.log(`[scrape] r.jina.ai threw: ${err.message}`);
+  }
+
+  throw new Error(
+    `All fetch attempts failed for ${url}.\n` +
+      `  Attempts: ${directErrors.length}\n` +
+      `  Errors: ${directErrors.join('; ')}`
+  );
+}
+
 async function fetchJson(url, headers = {}) {
+  // JSON endpoints (api.github.com) don't have Linktree's WAF, so a single
+  // attempt with the first browser header set is enough. Auth via
+  // GITHUB_TOKEN keeps us off the 60/hour unauthenticated cap.
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    // For JSON endpoints (e.g. api.github.com) we override Accept but
-    // keep the rest of the browser identity. The GitHub REST API
-    // requires Accept: application/json, and authenticating with the
-    // GITHUB_TOKEN keeps us off the 60/hour unauthenticated cap.
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: { ...BROWSER_HEADERS, Accept: 'application/json', ...headers },
+      headers: { ...BROWSER_HEADERS_SET[0], Accept: 'application/json', ...headers },
     });
     if (!res.ok) {
       throw new Error(`Request to ${url} failed with HTTP ${res.status}`);
@@ -120,6 +249,13 @@ async function fetchJson(url, headers = {}) {
     clearTimeout(timer);
   }
 }
+
+const SEO_START = '<!-- SEO:START -->';
+const SEO_END = '<!-- SEO:END -->';
+
+/* --------------------------------------------------------------------- */
+/* Generic helpers                                                        */
+/* --------------------------------------------------------------------- */
 
 /** Recursively walk an arbitrary JSON value, calling `visit` on every
  * plain object encountered. Used to hunt for data without depending on an
