@@ -50,11 +50,11 @@ jobs:
         # the GitHub user API call so it isn't hit by the 60/hour cap that
         # unauthenticated requests share across all Actions runners.
         #
-        # On failure, capture the last 80 lines of output to the GitHub
-        # Actions step summary (visible on the run page without
-        # downloading logs) so we can diagnose what tripped the scraper
-        # — Linktree WAF 406, r.jina.ai 401, timeout, etc. The `|| true`
-        # ensures the step still exits 0 so the deploy job can run.
+        # On failure, capture the last 80 lines of scraper output to
+        # /tmp/scrape.log, then ALSO commit that log to a debug file
+        # (data/last-scrape-error.log) so it can be read from the repo
+        # without needing Actions log access. The debug file is removed
+        # again as soon as the scraper succeeds.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -70,6 +70,13 @@ jobs:
               tail -n 80 /tmp/scrape.log
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
+            # Also write to a tracked file so we can read it via git
+            # (since we can't access Actions logs without a PAT).
+            tail -n 200 /tmp/scrape.log > data/last-scrape-error.log
+            echo "Scraper failed at $(date -u +%Y-%m-%dT%H:%M:%SZ), see data/last-scrape-error.log" >&2
+          else
+            # Scraper succeeded — remove any stale debug file.
+            rm -f data/last-scrape-error.log
           fi
           exit 0
 
@@ -80,8 +87,12 @@ jobs:
         # package-lock.json, a debug log, a node_modules entry that escaped
         # .gitignore) can no longer flip `changed=true` and then trip
         # `git commit` into "nothing to commit" → exit 1.
+        #
+        # `data/last-scrape-error.log` is included so that when the scraper
+        # fails, the captured log gets committed (and we can read it from
+        # the repo, since we don't have Actions log access without a PAT).
         run: |
-          if [ -n "$(git status --porcelain -- data/profile.json index.html robots.txt sitemap.xml)" ]; then
+          if [ -n "$(git status --porcelain -- data/profile.json index.html robots.txt sitemap.xml data/last-scrape-error.log)" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -92,7 +103,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/profile.json index.html robots.txt sitemap.xml
+          git add data/profile.json index.html robots.txt sitemap.xml data/last-scrape-error.log 2>/dev/null || true
           # Belt-and-suspenders: if `git add` staged nothing after all
           # (race between the diff check and commit, fsync delay, etc.),
           # skip the commit instead of failing the whole workflow with
@@ -101,7 +112,14 @@ jobs:
             echo "No staged changes after `git add`; skipping commit."
             exit 0
           fi
-          git commit -m "chore: auto-update Linktree data [skip ci]"
+          # If only the error log changed (i.e. scraper failed but produced
+          # a new error log), label the commit accordingly.
+          if git diff --cached --name-only | grep -q '^data/profile.json$'; then
+            msg="chore: auto-update Linktree data [skip ci]"
+          else
+            msg="chore: scraper failed, see data/last-scrape-error.log [skip ci]"
+          fi
+          git commit -m "$msg"
           # If a concurrent run (e.g. scheduled + push trigger) pushed
           # between our checkout and our push, rebase our single auto
           # commit on top of origin/main and retry instead of failing.
