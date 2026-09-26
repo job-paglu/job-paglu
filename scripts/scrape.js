@@ -42,79 +42,56 @@ const SITE_URL = process.env.SITE_URL || 'https://jobpaglu.eu.cc/';
 
 const FETCH_TIMEOUT_MS = 15_000;
 
-// Realistic Chrome-on-Windows header set. Linktree's edge WAF rejects
-// (HTTP 406 Not Acceptable) requests that claim to be a browser in the
-// User-Agent but send a non-browser-shaped Accept header. Specifically
-// `Accept: text/html,application/xhtml+xml` (no quality list, no
-// image/webp, no */* fallback) is the fingerprint that trips the 406.
-// Sending the full browser set — including Accept-Encoding: gzip and
-// the Sec-Fetch-* / Sec-Ch-Ua family — has been verified (Sep 2026)
-// to consistently return 200 from local machines.
+// One consistent, current Chrome-on-Windows identity. A real visitor sends
+// the same browser every time; rotating User-Agents from one IP within
+// seconds is itself a bot signal, so we no longer do that. The full header
+// set matters: Linktree answers HTTP 406 to requests that claim to be a
+// browser but send a non-browser Accept header.
 //
-// IMPORTANT (Sep 2026): GitHub Actions egress IPs are flagged by
-// Linktree's WAF regardless of the headers sent. The scraper therefore
-// retries with backoff and rotates through several UA strings, then
-// falls back to r.jina.ai as a last-resort reader-proxy. See
-// `fetchWithRetry()` and `fetchText()` below.
-const BROWSER_UAS = [
-  // Chrome 124 on Windows (primary)
-  {
-    ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-        '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    platform: '"Windows"',
-    chUa: '"Chromium";v="124", "Google Chrome";v="124", "Not.A/Brand";v="99"',
-  },
-  // Safari 17 on macOS (different browser, different fingerprint)
-  {
-    ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 ' +
-        '(KHTML, like Gecko) Version/17.0 Safari/605.1.15',
-    platform: '"macOS"',
-    // Safari doesn't send Sec-Ch-Ua family — omit them entirely
-    noChUa: true,
-  },
-  // Chrome 124 on Linux (what GH Actions runners actually run)
-  {
-    ua: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 ' +
-        '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    platform: '"Linux"',
-    chUa: '"Chromium";v="124", "Google Chrome";v="124", "Not.A/Brand";v="99"',
-  },
-  // Mobile Safari (drastically different fingerprint, often bypasses WAF rules
-  // that target desktop Chrome fingerprints)
-  {
-    ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) ' +
-        'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-    platform: '"iOS"',
-    noChUa: true,
-  },
-];
-
-/** Build a full browser-headers object for the given UA profile. */
-function buildBrowserHeaders(uaProfile) {
-  const h = {
-    'User-Agent': uaProfile.ua,
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Sec-Fetch-Dest': 'document',
-    'Sec-Fetch-Mode': 'navigate',
-    'Sec-Fetch-Site': 'none',
-    'Sec-Fetch-User': '?1',
-    'Upgrade-Insecure-Requests': '1',
-  };
-  if (!uaProfile.noChUa) {
-    h['Sec-Ch-Ua'] = uaProfile.chUa;
-    h['Sec-Ch-Ua-Mobile'] = '?0';
-    h['Sec-Ch-Ua-Platform'] = uaProfile.platform;
-  }
-  return h;
+// IMPORTANT (Sep 2026): Linktree's WAF answers HTTP 406 to GitHub Actions
+// egress IPs whatever headers are sent (8 of 8 attempts across 4 UAs got
+// 406, while the same request from a normal connection gets 200). The
+// block is on the runner's IP, so retrying from it only adds hits against
+// it. We make one direct request and, if blocked, go to the reader-proxy.
+function currentChromeMajor(now = Date.now()) {
+  // Chrome 138 reached stable on 2025-06-24, and a new major ships about
+  // every 4 weeks. Deriving the version from the date keeps the UA from
+  // going years stale (an old Chrome version is a bot signal too).
+  const base = Date.UTC(2025, 5, 24);
+  const releaseGap = 30 * 24 * 60 * 60 * 1000;
+  return 138 + Math.max(0, Math.floor((now - base) / releaseGap));
 }
 
-// Pre-built header sets for each UA in BROWSER_UAS, used in rotation.
-const BROWSER_HEADERS_SET = BROWSER_UAS.map(buildBrowserHeaders);
+const CHROME_MAJOR = currentChromeMajor();
+
+const BROWSER_HEADERS = {
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+    `(KHTML, like Gecko) Chrome/${CHROME_MAJOR}.0.0.0 Safari/537.36`,
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'Sec-Ch-Ua': `"Chromium";v="${CHROME_MAJOR}", "Google Chrome";v="${CHROME_MAJOR}", "Not.A/Brand";v="99"`,
+  'Sec-Ch-Ua-Mobile': '?0',
+  'Sec-Ch-Ua-Platform': '"Windows"',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'none',
+  'Sec-Fetch-User': '?1',
+  'Upgrade-Insecure-Requests': '1',
+};
+
+// Statuses that mean "this IP is blocked or throttled". Retrying them from
+// the same runner does not help and only prolongs the block.
+const BLOCK_STATUSES = new Set([401, 403, 406, 429, 451]);
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Random pause in [minMs, maxMs], so waits have no fixed rhythm. */
+function humanPause(minMs, maxMs) {
+  return sleep(minMs + Math.random() * (maxMs - minMs));
 }
 
 /** Single fetch attempt with timeout + headers. Returns Response or throws. */
@@ -133,124 +110,114 @@ async function singleFetch(url, headers, timeoutMs = FETCH_TIMEOUT_MS) {
   }
 }
 
-/** Fetch with retry + UA rotation + r.jina.ai fallback.
+function hasNextData(text) {
+  return typeof text === 'string' && text.includes('__NEXT_DATA__');
+}
+
+/** Start of a response body, quoted, for the log. Short bodies are usually
+ * a block page or an error message, and seeing it is the diagnosis. */
+function preview(text, max = 300) {
+  return JSON.stringify(String(text ?? '').slice(0, max));
+}
+
+/** Fetch the Linktree page with as few requests as possible.
  *
- * Strategy:
- *  1. Try each of the 4 UA profiles in turn, with a short backoff between.
- *  2. If all direct attempts fail (406/403/5xx/timeout), retry the rotation
- *     once more after a longer backoff — Linktree's WAF uses sliding-window
- *     rate limits, so simply waiting often unblocks the IP.
- *  3. As a last resort, fetch via r.jina.ai (a free public reader-proxy
- *     that returns the page text with bots/JS stripped). The data we need
- *     (__NEXT_DATA__ JSON) is in the HTML source, so we read raw bytes
- *     rather than the reader-formatted Markdown endpoint.
+ * Budget per run: at most 2 direct requests and 2 r.jina.ai requests, with
+ * randomised pauses between them. The old strategy made up to 9.
  *
- * The fallback is only triggered if direct fetch fails, so residential
- * IPs (local development, the very first CI runs) won't pay any extra
- * latency.
+ *  1. Direct, once. On a block status (406/403/429...) or a 200 that is
+ *     really a challenge page, go straight to the proxy. Only a transient
+ *     failure (timeout, network error, 5xx) earns one retry, after 5-15s.
+ *  2. r.jina.ai, which fetches the page from its own servers. It returns
+ *     Markdown by default, which has no __NEXT_DATA__, so we ask for HTML
+ *     with `X-Return-Format: html`. When jina's own fetch of Linktree is
+ *     blocked it answers 200 with a short body, so on a short or
+ *     __NEXT_DATA__-less answer we wait 20-40s and try once more with
+ *     `X-No-Cache` (a fresh fetch, not a replay of the cached block page).
+ *     Set JINA_API_KEY to use an authenticated quota instead of the shared
+ *     anonymous one.
  */
 async function fetchText(url) {
-  const directErrors = [];
+  const errors = [];
 
-  // Two passes over the UA rotation, with a longer backoff between passes.
-  for (let pass = 0; pass < 2; pass++) {
-    if (pass > 0) {
-      console.log(`[scrape] Direct fetch pass 1 exhausted, waiting 8s before retry...`);
-      await sleep(8_000);
-    }
-    for (let i = 0; i < BROWSER_HEADERS_SET.length; i++) {
-      const headers = BROWSER_HEADERS_SET[i];
-      const uaShort = headers['User-Agent'].slice(0, 60);
-      try {
-        const res = await singleFetch(url, headers);
-        if (res.ok) {
-          const text = await res.text();
-          // A WAF challenge/interstitial page also comes back as HTTP 200,
-          // but without the __NEXT_DATA__ payload we parse. Treat that as
-          // a failed attempt so we rotate UAs and, if needed, fall back.
-          if (!text.includes('__NEXT_DATA__')) {
-            directErrors.push(`pass${pass + 1}-ua${i + 1}: HTTP 200 without __NEXT_DATA__ (${text.length} chars)`);
-            console.log(`[scrape] Direct fetch UA #${i + 1} (${uaShort}...) returned 200 but no __NEXT_DATA__.`);
-            await sleep(1_500);
-            continue;
-          }
-          if (pass > 0 || i > 0) {
-            console.log(`[scrape] Direct fetch succeeded on pass ${pass + 1} UA #${i + 1}.`);
-          }
-          return text;
-        }
-        // 406 / 403 / 5xx → try next UA. 4xx other than 406/403 likely means
-        // the page is genuinely gone, but we still try alternates before
-        // giving up.
-        const msg = `HTTP ${res.status}`;
-        directErrors.push(`pass${pass + 1}-ua${i + 1}: ${msg}`);
-        console.log(`[scrape] Direct fetch UA #${i + 1} (${uaShort}...) returned ${msg}.`);
-      } catch (err) {
-        directErrors.push(`pass${pass + 1}-ua${i + 1}: ${err.name || 'Error'} ${err.message}`);
-        console.log(`[scrape] Direct fetch UA #${i + 1} (${uaShort}...) threw: ${err.message}`);
-      }
-      // Small backoff between UAs in same pass
-      await sleep(1_500);
-    }
-  }
-
-  // All direct attempts failed — fall back to r.jina.ai reader-proxy.
-  // r.jina.ai fetches the URL server-side from its own IPs. It returns
-  // Markdown by default, whatever Accept header is sent, and Markdown has
-  // no __NEXT_DATA__ block (so parsing yields zero links). The
-  // `X-Return-Format: html` header makes it return the page's HTML, which
-  // does include __NEXT_DATA__ (verified Sep 2026).
-  console.log(`[scrape] All direct fetches failed (${directErrors.length} attempts).`);
-  console.log(`[scrape] Falling back to r.jina.ai reader-proxy...`);
-  const jinaUrl = `https://r.jina.ai/${url}`;
-  try {
-    const res = await singleFetch(
-      jinaUrl,
-      {
-        // r.jina.ai asks for an API key for anonymous queries from
-        // low-reputation IPs, but a normal User-Agent helps.
-        'User-Agent': 'Mozilla/5.0 (compatible; linktree-scraper/1.0)',
-        'Accept': 'text/html,application/xhtml+xml,*/*;q=0.8',
-        'X-Return-Format': 'html',
-      },
-      60_000, // r.jina.ai can be slow, and the HTML is several MB
-    );
-    if (res.ok) {
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await singleFetch(url, BROWSER_HEADERS);
       const text = await res.text();
-      if (text && text.length > 1000) {
-        console.log(`[scrape] r.jina.ai returned ${text.length} chars.`);
-        if (!text.includes('__NEXT_DATA__')) {
-          console.log('[scrape] r.jina.ai response has no __NEXT_DATA__ block; parsing will likely find zero links.');
-        }
+      if (res.ok && hasNextData(text)) {
+        console.log(`[scrape] Direct fetch OK (attempt ${attempt}, ${text.length} chars).`);
         return text;
       }
-      directErrors.push(`jina: too short (${text.length} chars)`);
-    } else {
-      directErrors.push(`jina: HTTP ${res.status}`);
-      console.log(`[scrape] r.jina.ai returned HTTP ${res.status}.`);
+      const why = res.ok
+        ? `HTTP 200 without __NEXT_DATA__ (${text.length} chars)`
+        : `HTTP ${res.status}`;
+      errors.push(`direct${attempt}: ${why}`);
+      console.log(`[scrape] Direct fetch attempt ${attempt}: ${why}. Body: ${preview(text)}`);
+      if (res.ok || BLOCK_STATUSES.has(res.status)) break;
+    } catch (err) {
+      errors.push(`direct${attempt}: ${err.name || 'Error'} ${err.message}`);
+      console.log(`[scrape] Direct fetch attempt ${attempt} threw: ${err.message}`);
     }
-  } catch (err) {
-    directErrors.push(`jina: ${err.message}`);
-    console.log(`[scrape] r.jina.ai threw: ${err.message}`);
+    if (attempt === 1) await humanPause(5_000, 15_000);
+  }
+
+  const jinaKey = process.env.JINA_API_KEY;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    if (attempt === 1) {
+      console.log(`[scrape] Direct fetch failed; using r.jina.ai reader-proxy${jinaKey ? ' (API key)' : ''}...`);
+      await humanPause(2_000, 6_000);
+    } else {
+      console.log('[scrape] Waiting before one fresh r.jina.ai retry...');
+      await humanPause(20_000, 40_000);
+    }
+    try {
+      const res = await singleFetch(
+        `https://r.jina.ai/${url}`,
+        {
+          'User-Agent': 'Mozilla/5.0 (compatible; linktree-scraper/1.0)',
+          'Accept': 'text/html,application/xhtml+xml,*/*;q=0.8',
+          'X-Return-Format': 'html',
+          ...(attempt > 1 ? { 'X-No-Cache': 'true' } : {}),
+          ...(jinaKey ? { Authorization: `Bearer ${jinaKey}` } : {}),
+        },
+        60_000, // r.jina.ai can be slow, and the HTML is several MB
+      );
+      const text = await res.text();
+      if (res.ok && hasNextData(text)) {
+        console.log(`[scrape] r.jina.ai OK (attempt ${attempt}, ${text.length} chars).`);
+        return text;
+      }
+      const why = res.ok
+        ? `HTTP 200 without __NEXT_DATA__ (${text.length} chars)`
+        : `HTTP ${res.status}`;
+      errors.push(`jina${attempt}: ${why}`);
+      console.log(`[scrape] r.jina.ai attempt ${attempt}: ${why}. Body: ${preview(text)}`);
+      // jina's own 4xx (bad key, abuse block) will not clear in 30s; only a
+      // 200-with-block-page, 429 or 5xx is worth the one retry.
+      if (!res.ok && res.status !== 429 && res.status < 500) break;
+    } catch (err) {
+      errors.push(`jina${attempt}: ${err.name || 'Error'} ${err.message}`);
+      console.log(`[scrape] r.jina.ai attempt ${attempt} threw: ${err.message}`);
+    }
   }
 
   throw new Error(
     `All fetch attempts failed for ${url}.\n` +
-      `  Attempts: ${directErrors.length}\n` +
-      `  Errors: ${directErrors.join('; ')}`
+      `  Attempts: ${errors.length}\n` +
+      `  Errors: ${errors.join('; ')}`
   );
 }
 
 async function fetchJson(url, headers = {}) {
   // JSON endpoints (api.github.com) don't have Linktree's WAF, so a single
-  // attempt with the first browser header set is enough. Auth via
+  // attempt with the browser header set is enough. Auth via
   // GITHUB_TOKEN keeps us off the 60/hour unauthenticated cap.
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: { ...BROWSER_HEADERS_SET[0], Accept: 'application/json', ...headers },
+      headers: { ...BROWSER_HEADERS, Accept: 'application/json', ...headers },
     });
     if (!res.ok) {
       throw new Error(`Request to ${url} failed with HTTP ${res.status}`);

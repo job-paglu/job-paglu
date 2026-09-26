@@ -2,8 +2,10 @@ name: Update Linktree data and deploy
 
 on:
   schedule:
-    # Every 3 hours
-    - cron: '0 */3 * * *'
+    # Every 3 hours, at :23 rather than :00. The top of the hour is when
+    # GitHub's scheduler is busiest and when most bots fire; the job also
+    # adds a random start delay (see "Random start delay" below).
+    - cron: '23 */3 * * *'
   workflow_dispatch: {}
   push:
     branches: [main]
@@ -43,6 +45,16 @@ jobs:
         # nothing new.
         run: npm install --no-package-lock --no-audit --no-fund
 
+      - name: Random start delay
+        # Scheduled runs only: wait 0-8 minutes so requests don't arrive at
+        # the same minute every 3 hours, which is an obvious bot pattern.
+        # Push and manual runs start immediately.
+        if: github.event_name == 'schedule'
+        run: |
+          delay=$((RANDOM % 480))
+          echo "Sleeping ${delay}s before scraping"
+          sleep "$delay"
+
       - name: Run scraper
         # Never let a scrape failure fail the whole workflow: the script
         # already leaves previous data untouched on error, and Pages should
@@ -54,8 +66,12 @@ jobs:
         # flow directly to the workflow's own stderr so that ::error:: /
         # ::warning:: annotations emitted by scrape.js are picked up by
         # the Actions runner and shown on the run page (without sign-in).
+        #
+        # JINA_API_KEY is optional. Without it, r.jina.ai (the fallback when
+        # Linktree blocks the runner's IP) uses its shared anonymous quota.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JINA_API_KEY: ${{ secrets.JINA_API_KEY }}
         run: |
           set +e
           # Capture stdout to a file for the step-summary tail.
