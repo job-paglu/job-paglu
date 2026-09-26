@@ -1,6 +1,9 @@
 node_modules/
 .DS_Store
 *.log
+# The update workflow commits this on scraper failure so the log can be
+# read without Actions log access; keep it out of the *.log ignore.
+!data/last-scrape-error.log
 *.tmp-*
 
 # npm install in CI generates this lock file, but we don't track it

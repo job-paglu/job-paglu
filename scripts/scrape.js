@@ -164,10 +164,20 @@ async function fetchText(url) {
       try {
         const res = await singleFetch(url, headers);
         if (res.ok) {
+          const text = await res.text();
+          // A WAF challenge/interstitial page also comes back as HTTP 200,
+          // but without the __NEXT_DATA__ payload we parse. Treat that as
+          // a failed attempt so we rotate UAs and, if needed, fall back.
+          if (!text.includes('__NEXT_DATA__')) {
+            directErrors.push(`pass${pass + 1}-ua${i + 1}: HTTP 200 without __NEXT_DATA__ (${text.length} chars)`);
+            console.log(`[scrape] Direct fetch UA #${i + 1} (${uaShort}...) returned 200 but no __NEXT_DATA__.`);
+            await sleep(1_500);
+            continue;
+          }
           if (pass > 0 || i > 0) {
             console.log(`[scrape] Direct fetch succeeded on pass ${pass + 1} UA #${i + 1}.`);
           }
-          return await res.text();
+          return text;
         }
         // 406 / 403 / 5xx → try next UA. 4xx other than 406/403 likely means
         // the page is genuinely gone, but we still try alternates before
@@ -185,9 +195,11 @@ async function fetchText(url) {
   }
 
   // All direct attempts failed — fall back to r.jina.ai reader-proxy.
-  // r.jina.ai fetches the URL server-side from its own (residential) IPs
-  // and returns the page content. We use the raw endpoint by NOT
-  // requesting the markdown conversion (no Accept: text/markdown).
+  // r.jina.ai fetches the URL server-side from its own IPs. It returns
+  // Markdown by default, whatever Accept header is sent, and Markdown has
+  // no __NEXT_DATA__ block (so parsing yields zero links). The
+  // `X-Return-Format: html` header makes it return the page's HTML, which
+  // does include __NEXT_DATA__ (verified Sep 2026).
   console.log(`[scrape] All direct fetches failed (${directErrors.length} attempts).`);
   console.log(`[scrape] Falling back to r.jina.ai reader-proxy...`);
   const jinaUrl = `https://r.jina.ai/${url}`;
@@ -199,18 +211,17 @@ async function fetchText(url) {
         // low-reputation IPs, but a normal User-Agent helps.
         'User-Agent': 'Mozilla/5.0 (compatible; linktree-scraper/1.0)',
         'Accept': 'text/html,application/xhtml+xml,*/*;q=0.8',
+        'X-Return-Format': 'html',
       },
-      30_000, // r.jina.ai can be slow
+      60_000, // r.jina.ai can be slow, and the HTML is several MB
     );
     if (res.ok) {
       const text = await res.text();
       if (text && text.length > 1000) {
         console.log(`[scrape] r.jina.ai returned ${text.length} chars.`);
-        // r.jina.ai can return either raw HTML (when no Accept: text/markdown
-        // is sent) or a "Reader" Markdown variant. The __NEXT_DATA__ JSON
-        // block is only in raw HTML; if r.jina.ai stripped it, we'll fail
-        // later in parseLinktreeHtml() and the workflow's "nothing staged"
-        // guard will keep previous data.
+        if (!text.includes('__NEXT_DATA__')) {
+          console.log('[scrape] r.jina.ai response has no __NEXT_DATA__ block; parsing will likely find zero links.');
+        }
         return text;
       }
       directErrors.push(`jina: too short (${text.length} chars)`);
